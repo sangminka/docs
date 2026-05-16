@@ -1,0 +1,1701 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QT-AI 화면설계 클릭 목업</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f3f1ec;
+      --surface: #fffdfa;
+      --surface-2: #f8f5ef;
+      --ink: #25231f;
+      --muted: #6f685d;
+      --line: #ddd5c8;
+      --primary: #356455;
+      --primary-2: #e4efe9;
+      --accent: #bd7b2f;
+      --accent-2: #f7ead8;
+      --danger: #a6423b;
+      --admin: #314a63;
+      --radius: 8px;
+      --phone-w: 390px;
+      --phone-h: 844px;
+      --shadow: 0 16px 44px rgba(55, 48, 38, .16);
+      font-family: "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { min-height: 100%; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(180deg, #f8f6f1 0%, var(--bg) 55%, #ebe6dc 100%);
+      letter-spacing: 0;
+    }
+    button, input, textarea, select {
+      font: inherit;
+      letter-spacing: 0;
+    }
+    button {
+      border: 0;
+      cursor: pointer;
+    }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, [contenteditable]:focus-visible {
+      outline: 3px solid rgba(189, 123, 47, .35);
+      outline-offset: 2px;
+    }
+    [hidden] { display: none !important; }
+
+    .workbench {
+      display: grid;
+      grid-template-columns: minmax(248px, 300px) minmax(430px, 1fr) minmax(360px, 520px);
+      min-height: 100vh;
+    }
+    .sidebar {
+      padding: 22px 18px;
+      border-right: 1px solid var(--line);
+      background: rgba(255, 253, 250, .72);
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+    .brand {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 18px;
+    }
+    .brand-mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--primary);
+      border-radius: 7px;
+      font-weight: 800;
+    }
+    .brand h1 {
+      margin: 0;
+      font-size: 18px;
+      line-height: 1.25;
+    }
+    .brand p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .mode-switch, .flow-switch {
+      display: grid;
+      gap: 6px;
+      margin: 16px 0;
+    }
+    .segmented {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      padding: 4px;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .segmented button, .flow-switch button, .screen-link {
+      min-height: 36px;
+      color: var(--muted);
+      background: transparent;
+      border-radius: 6px;
+      text-align: left;
+      padding: 8px 10px;
+    }
+    .segmented button {
+      text-align: center;
+      font-weight: 700;
+    }
+    .segmented button.active, .flow-switch button.active, .screen-link.active {
+      color: var(--ink);
+      background: #fff;
+      box-shadow: inset 0 0 0 1px rgba(53, 100, 85, .18);
+    }
+    .flow-switch button {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, .45);
+    }
+    .flow-switch small {
+      color: var(--primary);
+      font-weight: 800;
+    }
+    .nav-group {
+      margin-top: 18px;
+    }
+    .nav-group h2 {
+      margin: 0 0 8px;
+      color: var(--muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .screen-list {
+      display: grid;
+      gap: 5px;
+    }
+    .screen-link {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 48px 1fr;
+      align-items: center;
+      border: 1px solid transparent;
+    }
+    .screen-link .id {
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .screen-link .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .stage {
+      padding: 24px clamp(18px, 3vw, 44px);
+      display: grid;
+      align-content: start;
+      justify-items: center;
+      gap: 18px;
+      min-width: 0;
+    }
+    .stage-head {
+      width: min(100%, 760px);
+      display: flex;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: end;
+    }
+    .stage-title h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+    .stage-title p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+    }
+    .flow-pill {
+      color: var(--primary);
+      background: var(--primary-2);
+      border: 1px solid rgba(53, 100, 85, .2);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+    .phone-shell {
+      width: var(--phone-w);
+      height: var(--phone-h);
+      background: #161616;
+      padding: 10px;
+      border-radius: 32px;
+      box-shadow: var(--shadow);
+      position: relative;
+    }
+    .phone {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      border-radius: 24px;
+      background: var(--surface);
+    }
+    .phone::before {
+      content: "";
+      position: absolute;
+      top: 8px;
+      left: 50%;
+      width: 96px;
+      height: 21px;
+      transform: translateX(-50%);
+      background: #161616;
+      border-radius: 999px;
+      z-index: 20;
+    }
+    .mobile-screen {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+    }
+    .appbar {
+      min-height: 78px;
+      padding: 36px 18px 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 253, 250, .96);
+      z-index: 3;
+    }
+    .appbar h3 {
+      margin: 0;
+      font-size: 17px;
+      line-height: 1.25;
+    }
+    .appbar small {
+      display: block;
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .icon-btn {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      color: var(--primary);
+      background: var(--primary-2);
+      border-radius: 8px;
+      font-weight: 900;
+    }
+    .icon-btn.active {
+      color: #fff;
+      background: var(--primary);
+    }
+    .screen-body {
+      flex: 1;
+      overflow: auto;
+      padding: 16px 16px 96px;
+    }
+    .screen-body.with-dock {
+      padding-bottom: 226px;
+    }
+    .onboarding-body {
+      padding: 110px 24px 28px;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      background:
+        radial-gradient(circle at 20% 12%, rgba(228, 239, 233, .9), transparent 28%),
+        var(--surface);
+    }
+    .logo-large {
+      width: 68px;
+      height: 68px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--primary);
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 22px;
+    }
+    .lead-title {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.25;
+    }
+    .lead-copy {
+      color: var(--muted);
+      margin: 12px 0 0;
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .primary-btn, .secondary-btn, .ghost-btn, .danger-btn {
+      min-height: 44px;
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-weight: 800;
+    }
+    .primary-btn {
+      color: #fff;
+      background: var(--primary);
+    }
+    .kakao-btn {
+      color: #2d2412;
+      background: #fee500;
+      width: 100%;
+    }
+    .secondary-btn {
+      color: var(--primary);
+      background: var(--primary-2);
+    }
+    .ghost-btn {
+      color: var(--muted);
+      background: transparent;
+      border: 1px solid var(--line);
+    }
+    .danger-btn {
+      color: #fff;
+      background: var(--danger);
+    }
+    .button-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .button-row > button {
+      flex: 1 1 130px;
+    }
+    .fine-links {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .field-label {
+      display: block;
+      margin: 18px 0 8px;
+      font-weight: 800;
+      font-size: 13px;
+    }
+    .field, .textarea, .select {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+      border-radius: 8px;
+      padding: 12px;
+    }
+    .textarea {
+      min-height: 116px;
+      resize: vertical;
+      line-height: 1.6;
+    }
+    .status-line {
+      margin-top: 8px;
+      color: var(--primary);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .tutorial-stack {
+      display: grid;
+      gap: 10px;
+      margin: 24px 0;
+    }
+    .step-card, .panel, .note-card, .feed-card, .mini-card {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .step-card {
+      padding: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+    .step-no {
+      width: 26px;
+      height: 26px;
+      flex: 0 0 auto;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--primary);
+      border-radius: 7px;
+      font-size: 12px;
+      font-weight: 900;
+    }
+    .panel {
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+    .panel h4 {
+      margin: 0 0 8px;
+      font-size: 15px;
+    }
+    .panel p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+      font-size: 13px;
+    }
+    .verse-head {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+      align-items: center;
+    }
+    .reference {
+      color: var(--primary);
+      font-weight: 900;
+      font-size: 14px;
+    }
+    .verse-row {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: 10px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+    }
+    .verse-row.has-actions {
+      border-radius: 8px;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+    .verse-row.note-selectable {
+      cursor: pointer;
+    }
+    .verse-row.note-selectable:hover {
+      background: var(--surface-2);
+    }
+    .verse-row.selected {
+      background: var(--primary-2);
+    }
+    .verse-row.note-selected {
+      box-shadow: inset 0 0 0 1px rgba(189, 123, 47, .5);
+    }
+    .verse-row:first-child { border-top: 0; }
+    .verse-no {
+      color: var(--accent);
+      font-weight: 900;
+    }
+    .verse-ko {
+      margin: 0 0 6px;
+      font-size: 14px;
+      line-height: 1.65;
+    }
+    .verse-en {
+      margin: 0;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .verse-actions {
+      grid-column: 2;
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+    .mini-btn {
+      min-height: 30px;
+      padding: 5px 9px;
+      border-radius: 999px;
+      color: var(--muted);
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      font-size: 11px;
+      font-weight: 800;
+    }
+    .mini-btn.active {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .accordion {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+    .accordion button {
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      color: var(--ink);
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      font-weight: 800;
+    }
+    .explain {
+      padding: 0 12px 12px;
+      border: 1px solid var(--line);
+      border-top: 0;
+      border-radius: 0 0 8px 8px;
+      background: #fff;
+    }
+    .verse-explain {
+      grid-column: 1 / -1;
+      margin: 2px 0 4px 38px;
+      padding: 12px;
+      border: 1px solid rgba(53, 100, 85, .2);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .verse-explain h4 {
+      margin: 0 0 6px;
+      font-size: 13px;
+    }
+    .term-list {
+      display: grid;
+      gap: 6px;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--line);
+    }
+    .term-list div {
+      display: grid;
+      grid-template-columns: 78px 1fr;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .term-list b {
+      color: var(--primary);
+    }
+    .source {
+      margin-top: 9px;
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .floating-ai {
+      position: absolute;
+      right: 18px;
+      bottom: 104px;
+      width: 52px;
+      height: 52px;
+      color: #fff;
+      background: var(--accent);
+      border-radius: 14px;
+      box-shadow: 0 10px 22px rgba(95, 56, 16, .22);
+      font-weight: 900;
+      z-index: 9;
+    }
+    .bottom-action {
+      position: absolute;
+      left: 16px;
+      right: 16px;
+      bottom: 72px;
+      z-index: 8;
+      display: grid;
+      gap: 8px;
+    }
+    .bottom-nav {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 62px;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      border-top: 1px solid var(--line);
+      background: rgba(255, 253, 250, .97);
+      z-index: 11;
+    }
+    .bible-dock {
+      position: absolute;
+      left: 14px;
+      right: 14px;
+      bottom: 72px;
+      z-index: 12;
+      display: grid;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .bible-dock > * {
+      pointer-events: auto;
+    }
+    .bible-note-bar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 253, 250, .98);
+      box-shadow: 0 10px 28px rgba(55, 48, 38, .14);
+    }
+    .bible-note-bar b {
+      display: block;
+      font-size: 13px;
+    }
+    .bible-note-bar span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+    .bible-note-panel {
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255, 253, 250, .98);
+      box-shadow: 0 10px 28px rgba(55, 48, 38, .14);
+    }
+    .bible-note-panel textarea {
+      min-height: 74px;
+    }
+    .bottom-nav button {
+      color: var(--muted);
+      background: transparent;
+      font-size: 11px;
+      font-weight: 800;
+      display: grid;
+      place-items: center;
+      align-content: center;
+      gap: 2px;
+    }
+    .bottom-nav button.active {
+      color: var(--primary);
+    }
+    .bottom-nav span {
+      display: block;
+      font-size: 17px;
+      line-height: 1;
+    }
+    .chip-row {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .chip {
+      min-height: 32px;
+      padding: 6px 10px;
+      color: var(--muted);
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .chip.active {
+      color: #fff;
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+    .sheet {
+      position: absolute;
+      inset: 0;
+      z-index: 30;
+      pointer-events: none;
+    }
+    .sheet-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(25, 23, 19, .28);
+      opacity: 0;
+      transition: opacity .18s ease;
+    }
+    .sheet-panel {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 86%;
+      height: 100%;
+      padding: 42px 16px 20px;
+      background: var(--surface);
+      box-shadow: -12px 0 34px rgba(40, 36, 30, .18);
+      transform: translateX(100%);
+      transition: transform .2s ease;
+      overflow: auto;
+    }
+    .sheet.open {
+      pointer-events: auto;
+    }
+    .sheet.open .sheet-backdrop { opacity: 1; }
+    .sheet.open .sheet-panel { transform: translateX(0); }
+    .blocked {
+      border-color: rgba(166, 66, 59, .28);
+      background: #fff7f6;
+    }
+    .toast {
+      position: absolute;
+      left: 24px;
+      right: 24px;
+      bottom: 142px;
+      padding: 12px;
+      color: #fff;
+      background: rgba(37, 35, 31, .92);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 800;
+      opacity: 0;
+      transform: translateY(8px);
+      transition: .18s ease;
+      z-index: 40;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+    .toggle-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+    }
+    .toggle {
+      width: 50px;
+      height: 28px;
+      padding: 3px;
+      background: #cfc7ba;
+      border-radius: 999px;
+      transition: background .18s ease;
+    }
+    .toggle::after {
+      content: "";
+      display: block;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform .18s ease;
+    }
+    .toggle.on {
+      background: var(--primary);
+    }
+    .toggle.on::after {
+      transform: translateX(22px);
+    }
+    .note-section {
+      margin-top: 12px;
+    }
+    .note-section h4 {
+      margin: 0 0 8px;
+      font-size: 13px;
+    }
+    .save-bar {
+      position: sticky;
+      bottom: -1px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      padding-top: 12px;
+      background: linear-gradient(180deg, rgba(255, 253, 250, 0), var(--surface) 28%);
+    }
+    .done-state {
+      min-height: 100%;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      padding: 20px;
+    }
+    .done-state h3 {
+      font-size: 24px;
+      margin: 12px 0 8px;
+    }
+    .done-mark {
+      width: 62px;
+      height: 62px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto;
+      border-radius: 18px;
+      color: #fff;
+      background: var(--primary);
+      font-size: 30px;
+      font-weight: 900;
+    }
+    .calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 5px;
+      margin-top: 10px;
+    }
+    .day {
+      aspect-ratio: 1;
+      display: grid;
+      place-items: center;
+      border-radius: 6px;
+      background: var(--surface-2);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .day.marked {
+      color: #fff;
+      background: var(--primary);
+    }
+    .progress {
+      height: 10px;
+      background: var(--surface-2);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+    .progress span {
+      display: block;
+      height: 100%;
+      width: 68%;
+      background: var(--accent);
+    }
+    .preview {
+      padding: 24px 22px;
+      border-left: 1px solid var(--line);
+      background: rgba(255, 253, 250, .56);
+      min-width: 0;
+      overflow: auto;
+      max-height: 100vh;
+      position: sticky;
+      top: 0;
+    }
+    .preview h2 {
+      margin: 0 0 12px;
+      font-size: 20px;
+    }
+    .story-map {
+      display: grid;
+      gap: 8px;
+    }
+    .story-node {
+      display: grid;
+      grid-template-columns: 54px 1fr;
+      align-items: center;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .story-node.active {
+      border-color: rgba(53, 100, 85, .45);
+      background: var(--primary-2);
+    }
+    .story-node strong {
+      color: var(--primary);
+      font-size: 12px;
+    }
+    .story-node span {
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .admin-shell {
+      min-height: 560px;
+      display: grid;
+      grid-template-columns: 178px 1fr;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: #fff;
+      box-shadow: var(--shadow);
+    }
+    .admin-nav {
+      padding: 16px;
+      background: #26384a;
+      color: #fff;
+    }
+    .admin-nav h3 {
+      margin: 0 0 18px;
+      font-size: 17px;
+    }
+    .admin-nav button {
+      width: 100%;
+      text-align: left;
+      min-height: 38px;
+      padding: 8px 10px;
+      color: rgba(255,255,255,.74);
+      background: transparent;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .admin-nav button.active {
+      color: #fff;
+      background: rgba(255,255,255,.14);
+    }
+    .admin-main {
+      padding: 18px;
+      min-width: 0;
+      background: #f7f8f7;
+    }
+    .admin-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .admin-top h3 {
+      margin: 0;
+      font-size: 22px;
+    }
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+    .metric {
+      padding: 12px;
+      background: #fff;
+      border: 1px solid #d9dee1;
+      border-radius: 8px;
+    }
+    .metric b {
+      display: block;
+      margin-top: 5px;
+      font-size: 22px;
+    }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid #d9dee1;
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 13px;
+    }
+    .admin-table th, .admin-table td {
+      padding: 11px;
+      text-align: left;
+      border-bottom: 1px solid #e5e8ea;
+      vertical-align: top;
+    }
+    .admin-table th {
+      color: #526271;
+      background: #eef2f3;
+      font-size: 12px;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--accent-2);
+      color: #7a4b17;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    @media (max-width: 1180px) {
+      .workbench {
+        grid-template-columns: 260px minmax(420px, 1fr);
+      }
+      .preview {
+        grid-column: 1 / -1;
+        max-height: none;
+        position: static;
+        border-left: 0;
+        border-top: 1px solid var(--line);
+      }
+    }
+    @media (max-width: 768px) {
+      .workbench {
+        display: block;
+      }
+      .sidebar {
+        position: static;
+        height: auto;
+        max-height: 48vh;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .stage {
+        padding: 16px 10px;
+      }
+      .stage-head {
+        align-items: start;
+        flex-direction: column;
+      }
+      .phone-shell {
+        width: min(100%, var(--phone-w));
+        height: min(844px, calc(100vh - 34px));
+      }
+      .admin-shell {
+        grid-template-columns: 1fr;
+      }
+      .admin-nav {
+        display: flex;
+        gap: 6px;
+        overflow: auto;
+      }
+      .admin-nav h3 {
+        display: none;
+      }
+      .admin-nav button {
+        white-space: nowrap;
+      }
+      .metric-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+    @media (max-width: 420px) {
+      .phone-shell {
+        padding: 0;
+        border-radius: 0;
+        background: transparent;
+      }
+      .phone {
+        border-radius: 0;
+      }
+      .phone::before {
+        display: none;
+      }
+      .screen-body {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1f211e;
+        --surface: #2a2b27;
+        --surface-2: #33352f;
+        --ink: #f3f0e8;
+        --muted: #c6beb0;
+        --line: #48473f;
+        --primary-2: #24372f;
+        --accent-2: #3e3021;
+      }
+      body { background: #1f211e; }
+      .panel, .step-card, .note-card, .feed-card, .mini-card, .story-node, .metric, .admin-table, .field, .textarea, .select { background: #2f302b; }
+      .admin-main { background: #222824; }
+      .admin-table th { background: #303b40; color: #d4dcdf; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="workbench">
+    <aside class="sidebar" aria-label="화면 목록">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">QT</div>
+        <div>
+          <h1>QT-AI 클릭 목업</h1>
+          <p>03_화면설계_스토리보드 기반</p>
+        </div>
+      </div>
+
+      <div class="mode-switch">
+        <div class="segmented" role="tablist" aria-label="목업 보기 모드">
+          <button class="active" data-mode="mobile" type="button">사용자 앱</button>
+          <button data-mode="admin" type="button">관리자</button>
+        </div>
+      </div>
+
+      <div class="flow-switch" aria-label="제작 흐름">
+        <button class="active" data-flow="core" type="button">1차 핵심 시연 <small>9</small></button>
+        <button data-flow="support" type="button">2차 MVP 보조 <small>7</small></button>
+        <button data-flow="admin" type="button">3차 운영자 <small>4</small></button>
+      </div>
+
+      <div id="screenGroups"></div>
+    </aside>
+
+    <main class="stage">
+      <div class="stage-head">
+        <div class="stage-title">
+          <h2 id="stageTitle">오늘의 QT 기본</h2>
+          <p id="stagePurpose">앱의 메인 화면. 사용자가 오늘의 본문을 바로 읽는다.</p>
+        </div>
+        <div id="flowPill" class="flow-pill">1차 핵심 시연</div>
+      </div>
+
+      <section id="mobileMock" class="phone-shell" aria-label="모바일 앱 목업">
+        <div class="phone">
+          <div id="phoneScreen" class="mobile-screen"></div>
+          <div id="aiSheet" class="sheet" aria-hidden="true">
+            <button class="sheet-backdrop" data-close-sheet type="button" aria-label="AI 질문 패널 닫기"></button>
+            <aside class="sheet-panel" aria-label="AI 질문 슬라이드">
+              <div class="toggle-row">
+                <div>
+                  <h3 style="margin:0">사실 기반 질문</h3>
+                  <p class="lead-copy" style="font-size:13px;margin-top:4px">단어, 시대상, 역사적 사실만 짧게 물어볼 수 있어요.</p>
+                </div>
+                <button class="icon-btn" data-close-sheet type="button" aria-label="닫기">×</button>
+              </div>
+              <div class="panel" style="margin-top:14px">
+                <h4>현재 맥락</h4>
+                <p>요한복음 15:2 · 열매 맺는 가지</p>
+              </div>
+              <label class="field-label" for="aiQuestion">질문 입력</label>
+              <textarea id="aiQuestion" class="textarea">포도나무 비유에서 농부는 어떤 역할을 뜻하나요?</textarea>
+              <button class="primary-btn" data-ai-answer type="button" style="width:100%;margin:10px 0 12px">질문하기</button>
+              <div id="aiAnswer" class="panel">
+                <h4>짧은 답변</h4>
+                <p>본문의 농부는 포도나무를 돌보고 열매를 맺도록 가지를 관리하는 존재로 묘사됩니다. 문맥상 하나님을 가리키는 표현으로 이해됩니다.</p>
+                <div class="source">출처: 요한복음 15:1-2, 관리자 검증 완료 해설</div>
+              </div>
+              <div class="panel blocked">
+                <h4>차단 예시</h4>
+                <p>“누가 더 믿음이 좋은가요?”처럼 가치 판단형 질문은 답변할 수 없어요.</p>
+              </div>
+            </aside>
+          </div>
+          <div id="toast" class="toast" role="status">임시저장됨</div>
+        </div>
+      </section>
+
+      <section id="adminMock" class="admin-shell" aria-label="관리자 콘솔 목업" hidden>
+        <nav class="admin-nav" aria-label="관리자 메뉴">
+          <h3>QT-AI Admin</h3>
+          <button class="active" data-admin="AD-01" type="button">대시보드</button>
+          <button data-admin="AD-02" type="button">오늘 QT 관리</button>
+          <button data-admin="AD-03" type="button">AI 산출물 검증</button>
+          <button data-admin="AD-04" type="button">신고 처리</button>
+        </nav>
+        <div id="adminContent" class="admin-main"></div>
+      </section>
+    </main>
+
+    <aside class="preview" aria-label="화면 연결 맵">
+      <h2>화면 연결 맵</h2>
+      <div id="storyMap" class="story-map"></div>
+    </aside>
+  </div>
+
+  <!-- FALLBACK: vendor/pretext.js를 직접 번들링하지 않고 CDN 모듈로 Pretext API를 사용합니다. -->
+  <script type="module">
+    let pretext;
+    try {
+      pretext = await import("https://esm.sh/@chenglou/pretext");
+    } catch {
+      pretext = {
+        prepare: (text) => ({ text }),
+        layout: (handle, maxWidth, lineHeight) => {
+          const count = Math.max(1, Math.ceil((handle.text || "").length / Math.max(12, maxWidth / 9)));
+          return { height: count * lineHeight, lineCount: count };
+        }
+      };
+    }
+
+    const flows = {
+      core: ["A-02", "A-03", "A-04", "Q-01", "Q-02", "Q-04", "Q-06", "Q-07", "M-01"],
+      support: ["B-01", "B-02", "B-03", "N-01", "N-03", "S-01", "S-02"],
+      admin: ["AD-01", "AD-02", "AD-03", "AD-04"]
+    };
+    const flowNames = {
+      core: "1차 핵심 시연",
+      support: "2차 MVP 보조",
+      admin: "3차 운영자"
+    };
+    const bottomTabs = [
+      ["Q-01", "QT", "⌂"],
+      ["B-01", "성경", "▤"],
+      ["N-01", "노트", "✎"],
+      ["S-01", "나눔", "◇"],
+      ["M-01", "마이", "●"]
+    ];
+    const screenMeta = {
+      "A-02": { group: "온보딩", name: "카카오 로그인", purpose: "로그인 없이는 어떤 기능도 사용할 수 없다는 정책을 자연스럽게 보여준다." },
+      "A-03": { group: "온보딩", name: "닉네임 설정", purpose: "나눔 공간에 노출될 닉네임을 가입 시점에 확정한다." },
+      "A-04": { group: "온보딩", name: "QT 튜토리얼", purpose: "QT가 익숙하지 않은 사용자에게 앱 사용 순서를 설명한다." },
+      "Q-01": { group: "오늘의 QT", name: "오늘의 QT 기본", purpose: "앱의 메인 화면. 사용자가 오늘의 본문을 바로 읽는다." },
+      "Q-02": { group: "오늘의 QT", name: "오늘의 QT 해설 펼침", purpose: "요약, 용어, 해설이 사용자가 원할 때만 나타나는 구조를 보여준다." },
+      "Q-04": { group: "오늘의 QT", name: "AI 질문 슬라이드", purpose: "AI가 단발 질문만 받는다는 정책을 보여준다." },
+      "Q-05": { group: "오늘의 QT", name: "TTS 미니 플레이어", purpose: "본문과 해설 음성 재생 기능을 보여준다." },
+      "Q-06": { group: "오늘의 QT", name: "묵상 노트 작성", purpose: "묵상 노트만 4섹션 구조를 가진다는 정책을 명확히 보여준다." },
+      "Q-07": { group: "오늘의 QT", name: "묵상 노트 저장 완료", purpose: "저장 후 다음 행동을 보여준다." },
+      "B-01": { group: "성경", name: "일반 성경 조회", purpose: "사용자가 성경 책·장·절을 자유롭게 조회한다." },
+      "B-02": { group: "성경", name: "절 선택 상태", purpose: "설교 노트 진입이 일반 성경 절 선택에서 시작됨을 보여준다." },
+      "B-03": { group: "성경", name: "설교 노트 작성", purpose: "설교 노트는 선택 구절 연결 + 1섹션 메모장 구조임을 보여준다." },
+      "N-01": { group: "노트", name: "노트 목록", purpose: "사용자의 기록을 카테고리별로 찾을 수 있게 한다." },
+      "N-03": { group: "노트", name: "기도제목 노트 작성", purpose: "개인 노트는 성경 본문 연결 없이 1섹션으로 작성한다." },
+      "S-01": { group: "나눔", name: "닉네임 나눔 피드", purpose: "조용한 블로그식 나눔 공간을 보여준다." },
+      "S-02": { group: "나눔", name: "나눔 상세", purpose: "공유된 묵상 노트 상세와 최소 반응을 보여준다." },
+      "M-01": { group: "마이페이지", name: "마이페이지 대시보드", purpose: "묵상 이력과 앱 사용 현황을 한 화면에서 요약한다." },
+      "AD-01": { group: "관리자", name: "관리자 대시보드", purpose: "운영자가 오늘의 QT, AI 산출물, 신고, 공지, 찬양을 관리하는 입구를 보여준다." },
+      "AD-02": { group: "관리자", name: "오늘 QT 관리", purpose: "날짜별 QT 본문 등록/수정 화면을 보여준다." },
+      "AD-03": { group: "관리자", name: "AI 산출물 검증", purpose: "검증 통과 콘텐츠만 사용자에게 노출된다는 구조를 보여준다." },
+      "AD-04": { group: "관리자", name: "신고 처리", purpose: "나눔 공간의 신고를 운영자가 처리한다." }
+    };
+
+    let state = {
+      mode: "mobile",
+      flow: "core",
+      screen: "Q-01",
+      admin: "AD-01",
+      shareOn: false,
+      englishOpen: false,
+      selectedVerse: null,
+      noteVerses: [],
+      noteFilter: "전체",
+      ttsOpen: false
+    };
+
+    const $ = (selector, root = document) => root.querySelector(selector);
+    const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
+    const esc = (value) => String(value).replace(/[&<>"']/g, (ch) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[ch]);
+
+    function appbar(title, sub = "", englishToggle = false) {
+      return `
+        <header class="appbar">
+          <div><h3 data-pretext contenteditable="true">${title}</h3>${sub ? `<small>${sub}</small>` : ""}</div>
+          <div style="display:flex;gap:8px">
+            ${englishToggle ? `<button class="icon-btn ${state.englishOpen ? "active" : ""}" data-action="english" type="button" aria-label="영어 본문 보기">E</button>` : ""}
+            <button class="icon-btn" data-action="tts" type="button" aria-label="TTS 미니 플레이어">▶</button>
+          </div>
+        </header>`;
+    }
+    function bottomNav(active) {
+      return `<nav class="bottom-nav" aria-label="하단 내비게이션">
+        ${bottomTabs.map(([id, label, icon]) => `
+          <button class="${active === id[0] ? "active" : ""}" data-go="${id}" type="button">
+            <span aria-hidden="true">${icon}</span>${label}
+          </button>`).join("")}
+      </nav>`;
+    }
+    function qtVerses(selectable = false, showEnglish = true, verseExplain = false) {
+      const rows = [
+        ["1", "나는 참포도나무요 내 아버지는 농부라.", "I am the true vine, and my Father is the gardener."],
+        ["2", "무릇 내게 붙어 있어 열매를 맺지 아니하는 가지는 아버지께서 그것을 제거해 버리시고.", "He cuts off every branch in me that bears no fruit."],
+        ["5", "나는 포도나무요 너희는 가지라. 그가 내 안에, 내가 그 안에 거하면 사람이 열매를 많이 맺나니.", "I am the vine; you are the branches."]
+      ];
+      const explanations = {
+        "1": {
+          title: "참포도나무",
+          summary: "예수님은 참된 생명의 근원이시고 하나님은 그 삶을 돌보시는 분입니다.",
+          body: "예수님이 생명과 공급의 근원이라는 점을 포도나무 비유로 소개합니다.",
+          terms: [["참포도나무", "생명과 공급의 근원이신 예수님을 비유적으로 표현한 말입니다."], ["농부", "포도원을 돌보고 가지를 관리하는 사람입니다."]]
+        },
+        "2": {
+          title: "열매 맺는 가지",
+          summary: "하나님은 열매 맺는 삶을 위해 가지를 돌보고 다듬으십니다.",
+          body: "농부가 가지를 돌보듯 하나님이 삶을 다듬어 열매 맺게 하신다는 흐름입니다.",
+          terms: [["열매", "믿음이 삶 속에서 드러나는 변화와 결과를 뜻합니다."], ["제거하다", "열매 없는 가지를 정리한다는 포도원 관리 표현입니다."]]
+        },
+        "5": {
+          title: "머무름",
+          summary: "예수님 안에 머무를 때 삶의 열매가 자연스럽게 맺힙니다.",
+          body: "가지가 나무에 붙어 있어야 열매를 맺듯, 예수님 안에 거하는 관계가 핵심입니다.",
+          terms: [["거하다", "잠깐 머무는 것이 아니라 관계 안에 계속 머문다는 뜻입니다."], ["가지", "포도나무에 붙어 생명을 공급받는 존재를 가리킵니다."]]
+        }
+      };
+      return `<div class="panel">
+        <div class="verse-head">
+          <span class="reference">요한복음 15:1-8</span>
+          ${selectable ? `<span class="badge">2개 절 선택됨</span>` : `<span class="badge">${verseExplain ? "절을 눌러 해설 보기" : "오늘 QT"}</span>`}
+        </div>
+        ${rows.map((r, index) => `
+          <div class="verse-row ${verseExplain ? "has-actions" : ""} ${selectable ? "note-selectable" : ""} ${verseExplain && state.selectedVerse === r[0] ? "selected" : ""} ${selectable && state.noteVerses.includes(r[0]) ? "note-selected" : ""}" ${selectable ? `data-select-note-verse="${r[0]}"` : ""} style="${selectable && index < 2 && !verseExplain ? "background:var(--primary-2);border-radius:8px;padding-left:8px;padding-right:8px" : ""}">
+            <div class="verse-no">${r[0]}</div>
+            <div>
+              <p class="verse-ko" data-pretext contenteditable="true">${r[1]}</p>
+              ${showEnglish ? `<p class="verse-en" data-pretext contenteditable="true">${r[2]}</p>` : ""}
+            </div>
+            ${verseExplain ? `<div class="verse-actions">
+              <button class="mini-btn ${state.selectedVerse === r[0] ? "active" : ""}" data-detail-verse="${r[0]}" type="button">자세히</button>
+            </div>` : ""}
+            ${verseExplain && state.selectedVerse === r[0] ? `<div class="verse-explain">
+              <h4>${r[0]}절 한 줄 요약</h4>
+              <p data-pretext contenteditable="true">${explanations[r[0]].summary}</p>
+              <div class="term-list">
+                <div><b>절별 해설</b><span data-pretext contenteditable="true">${explanations[r[0]].body}</span></div>
+              </div>
+              <div class="term-list" aria-label="${r[0]}절 어려운 단어 풀이">
+                <div><b>어려운 단어</b><span>${explanations[r[0]].title}</span></div>
+                ${explanations[r[0]].terms.map(([term, desc]) => `<div><b>${term}</b><span>${desc}</span></div>`).join("")}
+              </div>
+              <div class="source">출처: 요한복음 15:${r[0]}, 관리자 검증 완료 해설</div>
+            </div>` : ""}
+          </div>`).join("")}
+      </div>`;
+    }
+    function bibleSelector() {
+      return `<div class="button-row">
+        <select class="select" aria-label="성경 책 선택"><option>요한복음</option><option>창세기</option><option>시편</option></select>
+        <select class="select" aria-label="장 선택"><option>15장</option><option>1장</option><option>2장</option></select>
+      </div>`;
+    }
+    function bibleDock() {
+      const count = state.noteVerses.length;
+      const label = state.noteVerses.length ? state.noteVerses.join(", ") : "";
+      return `<div class="bible-dock" aria-label="성경 하단 노트 패널">
+        <div class="bible-note-bar">
+          <div>
+            <b>설교 노트 ${count}</b>
+            <span>${count ? `${label}절이 선택되어 있어요` : "절 행을 눌러 작성할 구절을 선택하세요"}</span>
+          </div>
+          <button class="secondary-btn" data-action="write-sermon-note" type="button" ${count ? "" : "disabled"}>작성하기</button>
+        </div>
+      </div>`;
+    }
+    function noteListMarkup() {
+      const notes = [
+        { title: "가족을 위한 기도제목", category: "기도", status: "저장됨", target: "N-03" },
+        { title: "말보다 먼저 듣기", category: "회개", status: "저장됨", target: "N-03" },
+        { title: "작은 도움에 감사", category: "감사", status: "저장됨", target: "N-03" }
+      ];
+      const filtered = state.noteFilter === "전체" ? notes : notes.filter((note) => note.category === state.noteFilter);
+      if (!filtered.length) return `<div class="panel"><p>${state.noteFilter} 노트가 아직 없어요.</p></div>`;
+      return filtered.map((note) => `<button class="note-card screen-link" style="grid-template-columns:1fr auto" data-go="${note.target}" type="button"><span class="name">${note.title}<br><small>${note.category} · ${note.status}</small></span><span class="id">5.17</span></button>`).join("");
+    }
+    function noteCreateMarkup() {
+      const createMap = {
+        "기도": "기도제목 작성",
+        "회개": "회개 노트 작성",
+        "감사": "감사일기 작성"
+      };
+      if (!createMap[state.noteFilter]) {
+        return `<div class="panel"><p>전체에서는 개인 노트 목록만 확인합니다. 작성은 기도, 회개, 감사 필터에서 시작합니다.</p></div>`;
+      }
+      return `<div class="tutorial-stack"><button class="primary-btn" data-go="N-03" type="button">${createMap[state.noteFilter]}</button></div>`;
+    }
+    function ttsPlayer() {
+      if (!state.ttsOpen) return "";
+      return `<div class="panel" style="position:absolute;left:16px;right:16px;bottom:138px;z-index:12">
+        <div class="toggle-row">
+          <b>요한복음 15:1 재생 중</b>
+          <button class="icon-btn" data-action="tts" type="button" aria-label="닫기">×</button>
+        </div>
+        <div class="button-row" style="margin-top:10px">
+          <button class="ghost-btn" type="button">이전 절</button>
+          <button class="secondary-btn" type="button">일시정지</button>
+          <button class="ghost-btn" type="button">다음 절</button>
+        </div>
+        <div class="chip-row" style="margin:10px 0 0">
+          <button class="chip active" type="button">한국어</button><button class="chip" type="button">영어</button>
+          <button class="chip" type="button">0.8x</button><button class="chip active" type="button">1.0x</button><button class="chip" type="button">1.2x</button>
+        </div>
+      </div>`;
+    }
+
+    const renderers = {
+      "A-02": () => `<section class="onboarding-body">
+        <div>
+          <div class="logo-large">QT</div>
+          <h2 class="lead-title" data-pretext contenteditable="true">오늘의 QT를 쉽게 읽고 기록해요</h2>
+          <p class="lead-copy" data-pretext contenteditable="true">해설은 필요할 때만 펼치고, 묵상은 나만의 기록으로 차분히 남겨요.</p>
+        </div>
+        <div>
+          <button class="primary-btn kakao-btn" data-go="A-03" type="button">카카오로 시작하기</button>
+          <div class="fine-links"><span>개인정보처리방침</span><span>이용약관</span></div>
+        </div>
+      </section>`,
+      "A-03": () => `<section class="onboarding-body">
+        <div>
+          <h2 class="lead-title">닉네임을 정해주세요</h2>
+          <p class="lead-copy">나눔 공간에 글을 공유하면 닉네임이 함께 표시됩니다.</p>
+          <label class="field-label" for="nickname">닉네임</label>
+          <input id="nickname" class="field" value="포도나무가지" aria-describedby="nickStatus">
+          <div id="nickStatus" class="status-line">사용 가능한 닉네임입니다.</div>
+        </div>
+        <button class="primary-btn" data-go="A-04" type="button">다음</button>
+      </section>`,
+      "A-04": () => `<section class="onboarding-body">
+        <div>
+          <h2 class="lead-title">QT는 이렇게 시작해요</h2>
+          <div class="tutorial-stack">
+            ${["오늘의 성경 본문을 읽어요", "어려운 말은 해설과 용어 풀이로 확인해요", "마음에 남은 내용을 묵상 노트로 기록해요", "필요할 때만 나눔 공간에 공유해요"].map((text, i) => `
+              <div class="step-card"><span class="step-no">${i + 1}</span><b data-pretext contenteditable="true">${text}</b></div>`).join("")}
+          </div>
+        </div>
+        <button class="primary-btn" data-go="Q-01" type="button">시작하기</button>
+      </section>`,
+      "Q-01": () => `${appbar("오늘의 QT", "5월 17일 · 머무름과 열매", true)}
+        <main class="screen-body">
+          ${qtVerses(false, state.englishOpen, true)}
+          <div class="panel"><p>절을 누르면 그 절의 한 줄 요약, 절별 해설, 어려운 단어 풀이가 함께 열립니다.</p></div>
+          <button class="secondary-btn" data-go="Q-03" type="button" style="width:100%">시뮬레이터 보기</button>
+        </main>
+        <button class="floating-ai" data-open-sheet type="button" aria-label="AI 질문 열기">AI</button>
+        <div class="bottom-action"><button class="primary-btn" data-go="Q-06" type="button">묵상 노트 쓰기</button></div>
+        ${ttsPlayer()}${bottomNav("Q")}`,
+      "Q-02": () => `${appbar("오늘의 QT", "해설 펼침 상태", true)}
+        <main class="screen-body">
+          ${qtVerses(false, state.englishOpen, true)}
+          <div class="panel"><h4>빈 상태 예시</h4><p>준비된 절 정보가 없으면 해당 절 아래에 "준비된 해설 없음"으로 표시합니다.</p></div>
+        </main>
+        <button class="floating-ai" data-open-sheet type="button">AI</button>
+        <div class="bottom-action"><button class="primary-btn" data-go="Q-06" type="button">묵상 노트 쓰기</button></div>
+        ${ttsPlayer()}${bottomNav("Q")}`,
+      "Q-03": () => `${appbar("장면 시뮬레이터", "요한복음 15:1-8")}
+        <main class="screen-body">
+          <div class="panel" style="height:330px;display:grid;place-items:center;text-align:center;background:linear-gradient(180deg,#e4efe9,#fffdfa)">
+            <div>
+              <div style="font-size:58px;color:var(--primary);font-weight:900">VINE</div>
+              <p>포도나무와 가지 장면 카드</p>
+              <span class="badge">정지 이미지 목업</span>
+            </div>
+          </div>
+          <div class="button-row"><button class="ghost-btn">이전 장면</button><button class="secondary-btn">재생</button><button class="ghost-btn">다음 장면</button></div>
+          <div class="panel"><h4>연결 본문</h4><p>요한복음 15:1-5</p></div>
+        </main>${bottomNav("Q")}`,
+      "Q-04": () => `${renderers["Q-01"]()}`,
+      "Q-05": () => `${appbar("TTS 재생", "요한복음 15:1", true)}
+        <main class="screen-body">${qtVerses(false, state.englishOpen)}<div class="panel"><h4>음성 옵션</h4><p>본문과 해설 화면에서만 미니 플레이어를 사용합니다.</p></div></main>
+        ${bottomNav("Q")}`,
+      "Q-06": () => `${appbar("묵상 노트", "오늘 QT · 요한복음 15:1-8")}
+        <main class="screen-body">
+          <div class="panel">
+            <div class="toggle-row"><div><h4>공개 설정</h4><p>기본 비공개입니다.</p></div><button class="toggle ${state.shareOn ? "on" : ""}" data-action="share" type="button" aria-label="공유 토글"></button></div>
+            ${state.shareOn ? `<p class="status-line">공유하면 닉네임 포도나무가지가 함께 표시됩니다.</p>` : ""}
+          </div>
+          ${["느낀 점", "기억할 구절", "적용할 점", "기도"].map((title, i) => `
+            <div class="note-section"><h4>${title}</h4><textarea class="textarea">${["말씀 안에 머무는 것이 열매의 시작이라는 점이 마음에 남았다.", "나는 포도나무요 너희는 가지라.", "오늘 결정 하나를 서두르지 않고 기도로 확인하기.", "주님 안에 머무는 시간을 먼저 선택하게 해주세요."][i]}</textarea></div>`).join("")}
+          <div class="save-bar"><button class="ghost-btn" data-toast="임시저장됨" type="button">임시저장</button><button class="primary-btn" data-go="Q-07" type="button">저장</button></div>
+        </main>${bottomNav("Q")}`,
+      "Q-07": () => `${appbar("저장 완료", "묵상 노트")}
+        <main class="done-state">
+          <div>
+            <div class="done-mark">✓</div>
+            <h3>저장 완료되었습니다</h3>
+            <p class="lead-copy">다음 행동을 선택해 이어서 확인할 수 있습니다.</p>
+            <div class="tutorial-stack">
+              <button class="primary-btn" data-go="Q-01" type="button">오늘의 QT로 돌아가기</button>
+              <button class="secondary-btn" data-go="S-01" type="button">나눔에 공유하기</button>
+              <button class="ghost-btn" data-go="M-01" type="button">마이페이지에서 기록 보기</button>
+            </div>
+          </div>
+        </main>${bottomNav("Q")}`,
+      "B-01": () => `${appbar("성경", "요한복음 15장", true)}
+        <main class="screen-body with-dock">
+          ${bibleSelector()}
+          ${qtVerses(true, state.englishOpen, true)}
+          <div class="panel"><h4>정책</h4><p>일반 성경도 절을 누르면 한 줄 요약, 절별 해설, 어려운 단어 풀이가 같은 구조로 열립니다. 다만 묵상 노트 버튼과 시뮬레이터 버튼은 배치하지 않습니다.</p></div>
+        </main><button class="floating-ai" data-open-sheet type="button">AI</button>${ttsPlayer()}${bibleDock()}${bottomNav("B")}`,
+      "B-02": () => `${appbar("성경", "절 선택 상태", true)}
+        <main class="screen-body with-dock">
+          ${bibleSelector()}
+          ${qtVerses(true, state.englishOpen, true)}
+        </main>
+        ${ttsPlayer()}${bibleDock()}${bottomNav("B")}`,
+      "B-03": () => `${appbar("설교 노트", state.noteVerses.length ? `요한복음 15:${state.noteVerses.join(", ")}` : "요한복음 15:1-2")}
+        <main class="screen-body">
+          <div class="panel"><h4>연결 본문</h4><p>${state.noteVerses.length ? `${state.noteVerses.join(", ")}절이 연결되었습니다.` : "나는 참포도나무요 내 아버지는 농부라..."}</p></div>
+          <label class="field-label">제목</label><input class="field" value="포도나무 비유 설교 메모">
+          <label class="field-label">본문</label><textarea class="textarea">${state.noteVerses.length ? `${state.noteVerses.join(", ")}절을 중심으로 설교 내용을 정리한다.` : "선택한 구절을 중심으로 설교 내용을 정리한다."}</textarea>
+          <div class="panel"><h4>해설</h4><p>준비된 해설 없음</p></div>
+          <div class="save-bar"><button class="ghost-btn" data-toast="임시저장됨" type="button">임시저장</button><button class="primary-btn" data-toast="저장 완료" type="button">저장</button></div>
+        </main>${bottomNav("B")}`,
+      "N-01": () => `${appbar("노트", "카테고리별 기록")}
+        <main class="screen-body">
+          <input class="field" placeholder="노트 검색">
+          <div class="chip-row" style="margin-top:12px">${["전체", "기도", "회개", "감사"].map((c)=>`<button class="chip ${state.noteFilter===c?"active":""}" data-note-filter="${c}" type="button">${c}</button>`).join("")}</div>
+          ${noteListMarkup()}
+          ${noteCreateMarkup()}
+        </main>${bottomNav("N")}`,
+      "N-03": () => `${appbar("기도제목", "개인 노트")}
+        <main class="screen-body">
+          <div class="panel"><h4>개인 노트 정책</h4><p>성경 본문 연결 없이 1섹션으로 작성합니다.</p></div>
+          <label class="field-label">제목</label><input class="field" value="이번 주 기도제목">
+          <label class="field-label">본문</label><textarea class="textarea" style="min-height:260px">가족의 건강과 이번 주 선택들을 위해 기도한다.</textarea>
+          <div class="save-bar"><button class="ghost-btn" data-toast="임시저장됨" type="button">임시저장</button><button class="primary-btn" data-toast="저장 완료" type="button">저장</button></div>
+        </main>${bottomNav("N")}`,
+      "S-01": () => `${appbar("닉네임 나눔", "공유된 묵상 기록")}
+        <main class="screen-body">
+          <div class="panel"><p>공유를 선택한 묵상 기록만 보여요.</p></div>
+          ${["포도나무가지", "작은등불", "은혜기록"].map((name,i)=>`<button class="feed-card" data-go="S-02" type="button" style="width:100%;text-align:left;padding:14px;margin-bottom:10px">
+            <b>${name}</b><p style="margin:8px 0;color:var(--muted)">요한복음 15:1-8 · ${["말씀 안에 머무는 것이 열매의 시작이라는 점이 마음에 남았습니다.", "오늘 하루 안에 머무는 연습을 해보려 합니다.", "기도로 가지치기 되는 시간을 받아들이고 싶습니다."][i]}</p>
+            <span class="badge">좋아요 ${8+i} · 댓글 ${i}</span>
+          </button>`).join("")}
+        </main>${bottomNav("S")}`,
+      "S-02": () => `${appbar("나눔 상세", "포도나무가지")}
+        <main class="screen-body">
+          <div class="panel"><h4>요한복음 15:1-8 · 5월 17일</h4><p>느낀 점: 말씀 안에 머무는 것이 열매의 시작이라는 점이 마음에 남았다.</p><p>적용할 점: 오늘 결정 하나를 서두르지 않고 기도로 확인하기.</p></div>
+          <div class="button-row"><button class="secondary-btn" type="button">좋아요</button><button class="ghost-btn" type="button">댓글</button><button class="ghost-btn" data-action="report" type="button">신고</button></div>
+          <div id="reportSheet" class="panel" hidden><h4>신고 사유</h4><div class="chip-row"><button class="chip active">부적절한 내용</button><button class="chip">도배</button><button class="chip">기타</button></div><textarea class="textarea" placeholder="상세 입력 선택"></textarea><button class="danger-btn" data-toast="신고가 접수되었습니다" type="button" style="width:100%;margin-top:8px">신고 접수</button></div>
+        </main>${bottomNav("S")}`,
+      "M-01": () => `${appbar("마이페이지", "포도나무가지")}
+        <main class="screen-body">
+          <div class="panel"><div class="toggle-row"><div><h4>포도나무가지</h4><p>카카오 로그인 · 회원 정보</p></div><button class="ghost-btn" type="button">관리</button></div></div>
+          <div class="panel"><h4>묵상 달력</h4><div class="calendar">${Array.from({length:28},(_,i)=>`<span class="day ${[1,2,5,7,8,13,16,21,22,23].includes(i)?"marked":""}">${i+1}</span>`).join("")}</div></div>
+          <div class="panel"><h4>통계</h4><p>이번 주 4회 · 이번 달 11회</p></div>
+          <div class="panel"><h4>월간 묵상 미션</h4><div class="progress"><span></span></div></div>
+          <div class="panel"><h4>최근 알림</h4><p>좋아요 2건 · 댓글 1건 · 공지 1건</p></div>
+          <div class="panel"><h4>내 찬양</h4><p>저장한 찬양 5곡 미리보기</p></div>
+        </main>${bottomNav("M")}`
+    };
+
+    function adminMarkup(id) {
+      const header = `<div class="admin-top"><div><h3>${screenMeta[id].name}</h3><p class="lead-copy" style="margin-top:4px">${screenMeta[id].purpose}</p></div><span class="badge">Admin Web 1440×1024</span></div>`;
+      if (id === "AD-01") return `${header}<div class="metric-grid">${[["오늘 QT", "게시"], ["검증 대기", "12"], ["신고 대기", "3"], ["공지", "1"]].map(([k,v])=>`<div class="metric"><span>${k}</span><b>${v}</b></div>`).join("")}</div>${table(["작업", "상태", "담당"], [["오늘 QT 게시", "완료", "운영자"], ["AI 해설 검증", "대기", "검수자"], ["신고 댓글 숨김", "처리", "운영자"]])}`;
+      if (id === "AD-02") return `${header}<div class="panel"><div class="button-row"><input class="field" value="2026-05-17"><input class="field" value="요한복음 15:1-8"><select class="select"><option>초안</option><option>게시</option><option>숨김</option></select></div><div class="button-row" style="margin-top:10px"><button class="ghost-btn">저장</button><button class="primary-btn">게시</button></div></div>${table(["변경 이력", "시각", "관리자"], [["본문 범위 수정", "10:12", "admin01"], ["상태 초안 저장", "09:40", "admin01"]])}`;
+      if (id === "AD-03") return `${header}<div class="chip-row">${["대기", "승인", "반려", "숨김"].map((c,i)=>`<button class="chip ${i===0?"active":""}">${c}</button>`).join("")}</div>${table(["유형", "본문 좌표", "검증 항목", "처리"], [["해설", "요 15:2", "스키마 · 금지 표현 · 사실 정합성", "승인 / 반려 / 보류"], ["Q&A 응답", "요 15:5", "출처 · 말투 · 단발성", "승인 / 반려 / 보류"]])}<div class="panel"><h4>정책</h4><p>검증용 한국어 주석 원문은 관리자 화면에도 노출하지 않습니다.</p></div>`;
+      return `${header}${table(["상태", "대상", "사유", "처리"], [["대기", "나눔 댓글", "부적절한 내용", "숨김 / 반려 / 제재 검토"], ["처리", "묵상 게시글", "도배", "감사 로그 기록"]])}`;
+    }
+    function table(heads, rows) {
+      return `<table class="admin-table"><thead><tr>${heads.map(h=>`<th>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(row=>`<tr>${row.map(cell=>`<td>${cell}</td>`).join("")}</tr>`).join("")}</tbody></table>`;
+    }
+
+    function renderSidebar() {
+      const groups = {};
+      Object.entries(screenMeta).forEach(([id, meta]) => {
+        if (id.startsWith("AD")) return;
+        groups[meta.group] ||= [];
+        groups[meta.group].push(id);
+      });
+      $("#screenGroups").innerHTML = Object.entries(groups).map(([group, ids]) => `
+        <div class="nav-group"><h2>${group}</h2><div class="screen-list">
+          ${ids.map(id => `<button class="screen-link ${state.screen === id ? "active" : ""}" data-go="${id}" type="button"><span class="id">${id}</span><span class="name">${screenMeta[id].name}</span></button>`).join("")}
+        </div></div>`).join("");
+    }
+    function renderStoryMap() {
+      const ids = flows[state.flow];
+      $("#storyMap").innerHTML = ids.map((id, i) => `
+        <button class="story-node ${state.screen === id || state.admin === id ? "active" : ""}" data-${id.startsWith("AD") ? "admin" : "go"}="${id}" type="button">
+          <strong>${i + 1}. ${id}</strong><span>${screenMeta[id].name}</span>
+        </button>`).join("");
+    }
+    function renderMobile() {
+      const meta = screenMeta[state.screen];
+      $("#stageTitle").textContent = meta.name;
+      $("#stagePurpose").textContent = meta.purpose;
+      $("#flowPill").textContent = flowNames[state.flow];
+      $("#phoneScreen").innerHTML = renderers[state.screen] ? renderers[state.screen]() : renderers["Q-01"]();
+      $("#aiSheet").classList.toggle("open", state.screen === "Q-04");
+      $("#aiSheet").setAttribute("aria-hidden", state.screen === "Q-04" ? "false" : "true");
+      relayoutText();
+    }
+    function renderAdmin() {
+      const meta = screenMeta[state.admin];
+      $("#stageTitle").textContent = meta.name;
+      $("#stagePurpose").textContent = meta.purpose;
+      $("#flowPill").textContent = flowNames.admin;
+      $("#adminContent").innerHTML = adminMarkup(state.admin);
+      $$(".admin-nav button").forEach(btn => btn.classList.toggle("active", btn.dataset.admin === state.admin));
+    }
+    function render() {
+      const isAdmin = state.mode === "admin";
+      $("#mobileMock").hidden = isAdmin;
+      $("#adminMock").hidden = !isAdmin;
+      $$(".segmented button").forEach(btn => btn.classList.toggle("active", btn.dataset.mode === state.mode));
+      $$(".flow-switch button").forEach(btn => btn.classList.toggle("active", btn.dataset.flow === state.flow));
+      renderSidebar();
+      renderStoryMap();
+      if (isAdmin) renderAdmin();
+      else renderMobile();
+    }
+    function go(id) {
+      if (id.startsWith("AD")) {
+        state.mode = "admin";
+        state.flow = "admin";
+        state.admin = id;
+      } else {
+        state.mode = "mobile";
+        state.screen = id;
+        if (id === "Q-02" && !state.selectedVerse) state.selectedVerse = "2";
+        if (flows.core.includes(id)) state.flow = "core";
+        else if (flows.support.includes(id)) state.flow = "support";
+      }
+      render();
+    }
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("show");
+      setTimeout(() => toast.classList.remove("show"), 1500);
+    }
+
+    const prepared = new Map();
+    async function relayoutText() {
+      await document.fonts.ready;
+      prepared.clear();
+      $$("[data-pretext]").forEach(el => {
+        const text = el.textContent.trim();
+        const font = getComputedStyle(el).font;
+        prepared.set(el, pretext.prepare(text, font));
+        if (el.contentEditable === "true" && !el.dataset.observed) {
+          el.dataset.observed = "true";
+          new MutationObserver(() => relayoutText()).observe(el, { characterData: true, subtree: true, childList: true });
+        }
+      });
+      layoutPrepared();
+    }
+    function layoutPrepared() {
+      prepared.forEach((handle, el) => {
+        const cs = getComputedStyle(el);
+        const lineHeight = parseFloat(cs.lineHeight) || parseFloat(cs.fontSize) * 1.55;
+        const result = pretext.layout(handle, Math.max(40, el.clientWidth), lineHeight);
+        if (result && result.height) el.style.minHeight = `${Math.ceil(result.height)}px`;
+      });
+    }
+    new ResizeObserver(layoutPrepared).observe(document.body);
+
+    document.addEventListener("click", (event) => {
+      const goBtn = event.target.closest("[data-go]");
+      const adminBtn = event.target.closest("[data-admin]");
+      const modeBtn = event.target.closest("[data-mode]");
+      const flowBtn = event.target.closest("[data-flow]");
+      const actionBtn = event.target.closest("[data-action]");
+      const toastBtn = event.target.closest("[data-toast]");
+      if (goBtn) go(goBtn.dataset.go);
+      if (adminBtn) {
+        state.mode = "admin";
+        state.flow = "admin";
+        state.admin = adminBtn.dataset.admin;
+        render();
+      }
+      if (modeBtn) {
+        state.mode = modeBtn.dataset.mode;
+        if (state.mode === "admin") state.flow = "admin";
+        render();
+      }
+      if (flowBtn) {
+        state.flow = flowBtn.dataset.flow;
+        if (state.flow === "admin") {
+          state.mode = "admin";
+          state.admin = "AD-01";
+        } else {
+          state.mode = "mobile";
+          state.screen = flows[state.flow][0];
+        }
+        render();
+      }
+      if (event.target.closest("[data-open-sheet]")) {
+        state.screen = "Q-04";
+        render();
+      }
+      if (event.target.closest("[data-close-sheet]")) {
+        state.screen = "Q-01";
+        render();
+      }
+      if (event.target.closest("[data-ai-answer]")) {
+        $("#aiAnswer").scrollIntoView({ block: "nearest" });
+      }
+      const detailVerseBtn = event.target.closest("[data-detail-verse]");
+      if (detailVerseBtn) {
+        event.stopPropagation();
+        state.selectedVerse = state.selectedVerse === detailVerseBtn.dataset.detailVerse ? null : detailVerseBtn.dataset.detailVerse;
+        state.screen = state.screen.startsWith("B-") ? "B-02" : "Q-02";
+        render();
+      }
+      const noteVerseRow = event.target.closest("[data-select-note-verse]");
+      if (noteVerseRow && state.screen.startsWith("B-")) {
+        const verse = noteVerseRow.dataset.selectNoteVerse;
+        state.noteVerses = state.noteVerses.includes(verse)
+          ? state.noteVerses.filter((item) => item !== verse)
+          : [...state.noteVerses, verse].sort((a, b) => Number(a) - Number(b));
+        state.screen = "B-02";
+        render();
+      }
+      const noteFilterBtn = event.target.closest("[data-note-filter]");
+      if (noteFilterBtn) {
+        state.noteFilter = noteFilterBtn.dataset.noteFilter;
+        render();
+      }
+      if (toastBtn) showToast(toastBtn.dataset.toast);
+      if (actionBtn) {
+        const action = actionBtn.dataset.action;
+        if (action === "tts") {
+          state.ttsOpen = !state.ttsOpen;
+          render();
+        }
+        if (action === "english") {
+          state.englishOpen = !state.englishOpen;
+          render();
+        }
+        if (action === "write-sermon-note") {
+          if (!state.noteVerses.length) return;
+          state.screen = "B-03";
+          render();
+        }
+        if (action === "share") {
+          state.shareOn = !state.shareOn;
+          render();
+        }
+        if (action === "report") {
+          const sheet = $("#reportSheet");
+          if (sheet) sheet.hidden = !sheet.hidden;
+        }
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
