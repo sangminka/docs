@@ -1921,7 +1921,8 @@
 
 | API 도메인 | 주요 API | 연결 테이블 | 핵심 데이터 항목 |
 |---|---|---|---|
-| 인증/회원 | `/auth/*`, `/me/*` | `members`, `member_auth_providers`, `admin_users` | `member.id`, `nickname`, `role`, `status`, `tutorial_completed_at` |
+| 인증/회원 | `/auth/*`, `/me/*` | `members`, `member_auth_providers` | `member.id`, `nickname`, `role`, `status`, `tutorial_completed_at` |
+| 관리자 권한/계정 | `/admin/dashboard`, `/admin/members/*` | `admin_users`, `members` | `admin_role`, `status`, `member_id` |
 | 성경 | `/bible/books`, `/bible/verses` | `bible_books`, `bible_verses` | `book_code`, `chapter_no`, `verse_no`, `korean_text`, `english_text` |
 | 오늘 QT | `/qt/today`, `/qt/{id}` | `qt_passages`, `qt_passage_verses`, `bible_verses` | `qt_date`, `title`, `status`, `display_order` |
 | 해설/단어 | `/qt/{id}/study-content` | `verse_explanations`, `glossary_terms`, `ai_generated_assets` | `summary`, `explanation`, `term`, `meaning`, `source_label`, `status` |
@@ -1938,6 +1939,8 @@
 | AI Q&A | `/ai/qa-requests` | `ai_qa_requests`, `ai_generated_assets`, `ai_validation_logs` | `question`, `answer`, `source_label`, `status`, `blocked_reason`, `qa_response_asset_id`, `answered_at` |
 | 평가 셋 | `/admin/ai/evaluation-sets/*` | `ai_evaluation_sets`, `ai_evaluation_cases` | `name`, `eval_type`, `version`, `target_type`, `source_type`, `expected_policy_json`, `status` |
 | 감사 로그 | `/admin/audit-logs` | `audit_logs`, `admin_users`, `service_accounts` | `actor_type`, `actor_id`, `action_type`, `target_type`, `target_id` |
+
+> `admin_users`는 인증/회원 도메인의 소유 테이블이 아니라 관리자 권한 확인과 운영 계정 상태 관리를 위한 참조 테이블이다. 회원 API에서 `adminRole`이 필요한 경우 조회 전용으로만 참조한다.
 
 ### 8.1 주요 API 필드명과 ERD 컬럼명 매핑
 

@@ -175,6 +175,7 @@ erDiagram
         VARCHAR title_snapshot
         JSON verse_snapshot_json
         VARCHAR status
+        DATETIME source_note_unshared_at
     }
     comments {
         BIGINT id PK
@@ -198,6 +199,7 @@ erDiagram
         BIGINT id PK
         BIGINT member_id FK
         BIGINT notice_id FK
+        VARCHAR event_key
         DATETIME read_at
     }
     notices {
@@ -273,6 +275,10 @@ erDiagram
         BIGINT bible_verse_id FK
         BIGINT qa_response_asset_id FK
         VARCHAR status
+        VARCHAR question_hash
+        DATETIME retention_until
+        DATETIME anonymized_at
+        DATETIME deleted_at
     }
     admin_users {
         BIGINT id PK
@@ -593,7 +599,7 @@ erDiagram
 | visibility | VARCHAR(20) | N | 'PRIVATE' | | PRIVATE, SHARED |
 | title | VARCHAR(100) | Y | NULL | | 제목 |
 | qt_passage_id | BIGINT | Y | NULL | FK | 묵상 노트 연결 QT |
-| active_unique_key | VARCHAR(20) | Y | 'ACTIVE' | | 활성 묵상 노트 중복 방지용 키 |
+| active_unique_key | VARCHAR(20) | Y | NULL | | 활성 묵상 노트 중복 방지용 키 |
 | feeling | TEXT | Y | NULL | | 묵상 노트: 느낀 점 |
 | memory_verse | TEXT | Y | NULL | | 묵상 노트: 기억할 구절 |
 | application | TEXT | Y | NULL | | 묵상 노트: 적용할 점 |
@@ -610,7 +616,7 @@ erDiagram
 - `idx_notes_qt_passage` ON (qt_passage_id)
 - `uk_notes_active_qt_meditation` UNIQUE ON (member_id, qt_passage_id, category, active_unique_key)
 
-> 묵상 노트는 `category = MEDITATION`, `qt_passage_id IS NOT NULL`, `active_unique_key = 'ACTIVE'` 상태에서만 사용자별 QT 1건을 허용한다. 소프트 삭제 시 `deleted_at`을 세팅하고 `active_unique_key = NULL`로 변경하여 같은 QT 본문에 새 묵상 노트를 다시 작성할 수 있게 한다. 설교 노트와 개인 노트는 `qt_passage_id`가 없거나 카테고리가 달라 이 유니크 정책의 대상이 아니다.
+> 묵상 노트는 `category = MEDITATION`, `qt_passage_id IS NOT NULL`, `status != DELETED`, `active_unique_key = 'ACTIVE'` 상태에서만 사용자별 QT 1건을 허용한다. 기본값은 `NULL`이며, Service는 저장 확정된 활성 묵상 노트에만 `active_unique_key = 'ACTIVE'`를 세팅한다. 소프트 삭제 시 `deleted_at`을 세팅하고 `active_unique_key = NULL`로 변경하여 같은 QT 본문에 새 묵상 노트를 다시 작성할 수 있게 한다. 설교 노트와 개인 노트는 `active_unique_key = NULL`을 유지해 이 유니크 정책의 대상이 되지 않는다.
 
 ---
 
@@ -648,6 +654,7 @@ erDiagram
 | comments_enabled | BOOLEAN | N | TRUE | | 댓글 허용 여부 |
 | status | VARCHAR(20) | N | 'PUBLISHED' | | PUBLISHED, HIDDEN, DELETED |
 | source_note_deleted_at | DATETIME(6) | Y | NULL | | 원본 노트 삭제 감지 시각 |
+| source_note_unshared_at | DATETIME(6) | Y | NULL | | 원본 노트 비공개 전환 또는 공유 취소 감지 시각 |
 | published_at | DATETIME(6) | N | CURRENT_TIMESTAMP(6) | | 게시 시각 |
 | hidden_at | DATETIME(6) | Y | NULL | | 숨김 처리 시각 |
 | created_at | DATETIME(6) | N | CURRENT_TIMESTAMP(6) | | 생성 시각 |
@@ -658,6 +665,7 @@ erDiagram
 - `idx_sharing_posts_status_published` ON (status, published_at)
 - `idx_sharing_posts_member` ON (member_id)
 - `idx_sharing_posts_source_deleted` ON (source_note_deleted_at)
+- `idx_sharing_posts_source_unshared` ON (source_note_unshared_at)
 
 **제약 정책**
 - 나눔 게시글은 묵상 기록 공유 정책에 따라 QT 노트와 자유 노트 모두 생성할 수 있다.
@@ -666,6 +674,7 @@ erDiagram
 - 공유 생성 시점에 원본 노트의 공개 대상 데이터를 스냅샷 컬럼에 복사한다.
 - 원본 노트가 이후 수정되어도 공유글은 자동 변경되지 않는다.
 - 원본 노트가 삭제되어도 공유글 노출 여부는 `sharing_posts.status`로 별도 관리한다.
+- 원본 노트가 `visibility = PRIVATE`로 전환되거나 사용자가 공유를 취소하면 `source_note_unshared_at`을 기록하고 `sharing_posts.status`를 `DELETED` 또는 정책상 필요한 경우 `HIDDEN`으로 전환한다.
 ---
 
 ### 2.16 comments — 댓글
@@ -723,6 +732,7 @@ erDiagram
 - `idx_reports_status_created` ON (status, created_at)
 - `idx_reports_reporter` ON (reporter_member_id)
 - `idx_reports_processed_admin` ON (processed_by_admin_id, processed_at)
+- `uk_reports_reporter_target` UNIQUE ON (reporter_member_id, target_type, target_id)
 
 **AI 신고 사유 코드**
 - `FACT_ERROR`: 사실 오류
@@ -743,11 +753,18 @@ erDiagram
 | notice_id | BIGINT | Y | NULL | FK | 공지 알림인 경우 notices.id |
 | link_type | VARCHAR(30) | Y | NULL | | 이동 대상 타입 |
 | link_id | BIGINT | Y | NULL | | 이동 대상 ID |
+| event_key | VARCHAR(120) | Y | NULL | | 동일 이벤트 중복 알림 방지 키 |
 | read_at | DATETIME(6) | Y | NULL | | 읽음 시각 |
 | created_at | DATETIME(6) | N | CURRENT_TIMESTAMP(6) | | 생성 시각 |
 
 **인덱스**
 - `idx_notifications_member_read_created` ON (member_id, read_at, created_at)
+- `uk_notifications_member_event` UNIQUE ON (member_id, event_key)
+
+**제약 정책**
+- 좋아요, 댓글, 신고 처리 결과처럼 동일 이벤트 중복 생성이 문제가 되는 알림은 `event_key`를 세팅한다.
+- `event_key`가 없는 단순 공지성 또는 운영성 알림은 중복 방지를 Service 정책으로 처리한다.
+- MVP에서는 알림 삭제 API를 만들지 않고 읽음 상태만 변경한다. 알림 보존 기간과 물리 삭제 여부는 후속 운영 정책에서 확정한다.
 
 ---
 
@@ -976,12 +993,17 @@ erDiagram
 | member_id | BIGINT | N | - | FK | 질문자 |
 | context_type | VARCHAR(20) | N | - | | QT, BIBLE |
 | bible_verse_id | BIGINT | Y | NULL | FK | 질문 맥락 절 |
-| question | VARCHAR(500) | N | - | | 단발 질문 |
+| question | VARCHAR(500) | Y | NULL | | 정책상 저장하는 경우의 단발 질문 원문 |
+| question_hash | VARCHAR(100) | Y | NULL | | 원문 미저장 또는 캐싱용 정규화 질문 해시 |
 | answer | TEXT | Y | NULL | | 검증 통과 응답 |
 | source_label | VARCHAR(300) | Y | NULL | | 출처 표기 |
 | qa_response_asset_id | BIGINT | Y | NULL | FK | 검증 로그와 연결되는 Q&A 응답 산출물 |
 | status | VARCHAR(20) | N | 'REQUESTED' | | REQUESTED, ANSWERED, BLOCKED, FAILED |
 | blocked_reason | VARCHAR(100) | Y | NULL | | 가치 판단형 등 차단 사유 |
+| privacy_policy_version | VARCHAR(30) | Y | NULL | | 적용된 개인정보/보존 정책 버전 |
+| retention_until | DATETIME(6) | Y | NULL | | Q&A 원문 보존 종료 예정 시각 |
+| anonymized_at | DATETIME(6) | Y | NULL | | 질문자 또는 원문 비식별화 시각 |
+| deleted_at | DATETIME(6) | Y | NULL | | 원문 삭제 또는 보존 만료 처리 시각 |
 | created_at | DATETIME(6) | N | CURRENT_TIMESTAMP(6) | | 요청 시각 |
 | answered_at | DATETIME(6) | Y | NULL | | 응답 시각 |
 
@@ -989,8 +1011,11 @@ erDiagram
 - `idx_ai_qa_member_created` ON (member_id, created_at)
 - `idx_ai_qa_verse_created` ON (bible_verse_id, created_at)
 - `idx_ai_qa_status_created` ON (status, created_at)
+- `idx_ai_qa_question_hash` ON (question_hash)
+- `idx_ai_qa_retention_until` ON (retention_until)
 
 > Q&A 응답도 먼저 `ai_generation_jobs.job_type = QA` 생성 작업을 만들고, 그 결과를 `ai_generated_assets.asset_type = QA_RESPONSE`로 저장한다. 이후 `ai_validation_logs`의 1·2층 검증 로그를 남긴다. 검증 통과 후 `ai_qa_requests.qa_response_asset_id`를 연결하고 `answer`, `source_label`, `answered_at`을 확정한다. 차단된 질문은 `status = BLOCKED`와 `blocked_reason`만 남기며 사용자 노출 응답 산출물은 만들지 않는다.
+> `question`, `answer` 원문은 개인정보 처리 정책에 따라 암호화 저장, 익명화, 또는 미저장을 선택할 수 있다. 원문을 저장하지 않는 경우 `question = NULL`로 두고 `question_hash`만 저장할 수 있다. 저장하는 경우 `privacy_policy_version`과 `retention_until`을 함께 기록하고, 보존 기간이 지나면 `anonymized_at` 또는 `deleted_at`을 기록한다. AI 학습 재사용 여부는 별도 개인정보 정책에서 허용된 경우에만 가능하다.
 
 ---
 
@@ -1483,6 +1508,8 @@ stateDiagram-v2
 | notes | 소프트 딜리트 | 개인 기록 복구/감사 가능성 |
 | sharing_posts | 상태 전이 | 공유 취소, 신고 처리 이력 필요 |
 | comments | 소프트 딜리트 | 신고/운영 이력 필요 |
+| notifications | 읽음 상태 변경 + 보존 기간 후 삭제 검토 | 알림 삭제 정책과 보존 기간 후속 확정 필요 |
+| ai_qa_requests | 보존 기간 기반 익명화/삭제 | 질문·응답 원문 개인정보 최소 저장 필요 |
 | ai_generated_assets | 상태 전이 | 검증 이력 보존 필요 |
 | validation_reference_jobs | 상태 전이 + 실물 삭제 | 검증용 주석 원문/색인은 임시 사용 후 삭제 |
 | audit_logs | 삭제 금지 | 운영 감사 보존 |
@@ -1516,6 +1543,8 @@ stateDiagram-v2
 - `TEXT`, `JSON` 컬럼에는 기본 인덱스를 걸지 않는다.
 - 나눔 피드는 최신순 페이징이 핵심이므로 `published_at` 정렬 성능을 우선 확인한다.
 - AI Q&A 사용량 제한은 `ai_qa_requests(member_id, created_at)` 기준으로 집계한다.
+- AI Q&A 원문 보존 만료 처리는 `ai_qa_requests(retention_until)` 기준으로 집계한다.
+- 알림 중복 방지는 `notifications(member_id, event_key)` 유니크 제약과 Service 검증을 함께 사용한다.
 - `reports.target_type + target_id`, `audit_logs.target_type + target_id`는 다형 참조이므로 FK가 아니라 애플리케이션 무결성 검증이 필요하다.
 - `commentary_materials.content_text`, `content_html`은 원문 보존 목적이므로 본문 검색이 필요해질 때 별도 전문 검색 인덱스 또는 검색 엔진을 검토한다.
 
