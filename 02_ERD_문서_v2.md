@@ -118,6 +118,7 @@ erDiagram
         BIGINT bible_verse_id FK
         BIGINT ai_asset_id FK
         VARCHAR status
+        VARCHAR active_unique_key
     }
     glossary_terms {
         BIGINT id PK
@@ -447,6 +448,7 @@ erDiagram
 | explanation | TEXT | N | - | | 사용자 노출 해설 |
 | source_label | VARCHAR(200) | N | - | | 사용자 노출용 출처 표기 |
 | status | VARCHAR(20) | N | 'PENDING' | | PENDING, APPROVED, REJECTED, HIDDEN |
+| active_unique_key | VARCHAR(20) | Y | NULL | | 절별 현재 노출 승인본 중복 방지용 키 |
 | ai_asset_id | BIGINT | Y | NULL | FK | ai_generated_assets.id |
 | approved_at | DATETIME(6) | Y | NULL | | 검증 통과 시각 |
 | created_at | DATETIME(6) | N | CURRENT_TIMESTAMP(6) | | 생성 시각 |
@@ -455,6 +457,13 @@ erDiagram
 **인덱스**
 - `idx_explanations_verse_status` ON (bible_verse_id, status)
 - `idx_explanations_status` ON (status)
+- `uk_explanations_active_per_verse` UNIQUE ON (bible_verse_id, active_unique_key)
+
+**제약 정책**
+- 한 절에는 해설 이력과 반려본을 여러 건 저장할 수 있다.
+- 사용자에게 노출되는 현재 승인 해설은 절별 1건만 허용한다.
+- 현재 노출 승인본은 `status = APPROVED`, `active_unique_key = 'ACTIVE'`로 관리한다.
+- `PENDING`, `REJECTED`, `HIDDEN` 또는 과거 승인본은 `active_unique_key = NULL`로 관리한다.
 
 ---
 
@@ -1372,6 +1381,7 @@ stateDiagram-v2
 
 3. **AI 생성과 사용자 노출 콘텐츠를 분리한다.**  
    근거: 검증 전 산출물이 사용자에게 노출되면 안 되므로 `ai_generated_assets`와 `verse_explanations`, `simulator_clips`를 분리한다.
+   절별 해설은 이력 보존을 위해 1:N으로 저장하되, 사용자에게 노출되는 현재 승인본은 `active_unique_key = 'ACTIVE'` 기준으로 절별 1건만 허용한다.
 
 4. **나눔 게시글은 노트의 공개 표현으로 별도 테이블을 둔다.**  
    근거: 노트는 개인 기록이 기본이며, 공유 취소·댓글·좋아요·신고는 게시글 도메인에서 관리하는 편이 안전하다. 공유 대상은 QT 노트와 자유 노트를 모두 포함한다.
@@ -1489,7 +1499,7 @@ stateDiagram-v2
 | --- | --- | --- |
 | 오늘 QT | qt_date, status | `qt_passages(qt_date)`, `qt_passages(status, qt_date)` |
 | 성경 장 조회 | book_id, chapter_no | `bible_verses(book_id, chapter_no)` |
-| 절별 해설 | bible_verse_id, status | `verse_explanations(bible_verse_id, status)` |
+| 절별 해설 | bible_verse_id, status | `verse_explanations(bible_verse_id, status)`, `verse_explanations(bible_verse_id, active_unique_key)` |
 | 생성용 주석 조회 | bible_verse_id | `commentary_material_verses(bible_verse_id)` |
 | 생성용 주석 범위 조회 | book_code, chapter_start, verse_start | `commentary_materials(book_code, chapter_start, verse_start, chapter_end, verse_end)` |
 | 묵상 달력 | member_id, category, created_at/saved_at | `notes(member_id, category, created_at)` |
