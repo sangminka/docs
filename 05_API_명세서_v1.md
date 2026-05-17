@@ -1,10 +1,10 @@
-# QT-AI API 명세서 v1.1
+# QT-AI API 명세서 v1.3
 
-> **문서 버전:** v1.1  
+> **문서 버전:** v1.3  
 > **작성일:** 2026-05-17  
 > **기준 문서:** `01.요구사항명세서_현재완성v1.md`, `02_ERD_문서_v2.md`, `04_화면정의서.md`, `03_화면설계_스토리보드.md`  
 > **작성 관점:** 백엔드 API 설계, 화면-API-ERD 연결성, 인증/권한, 예외 처리
-> **v1.1 보강 범위:** 화면별 목록 API 상세화, 노트/나눔/AI/관리자 운영 계약 보강, ERD 컬럼 정합성 보정
+> **v1.3 보강 범위:** 관리자 찬양/공지 API 상세화, 노트 수정 계약 보강, 나눔 삭제 ERD 정합성 보정, 하단 연결성 표 잔여 필드명 정리
 
 ---
 
@@ -59,6 +59,8 @@
   "traceId": "01HX..."
 }
 ```
+
+> 이하 각 API의 JSON 예시는 특별히 `success`, `data`, `error`, `timestamp`, `traceId`를 명시하지 않는 한 공통 응답 envelope의 `data` 객체만 표시한다. 프론트 mock과 QA fixture를 만들 때는 1.4/1.5의 envelope로 감싸서 사용한다. `204 No Content` 응답은 envelope를 사용하지 않는다.
 
 ### 1.5 공통 에러 응답 형식
 
@@ -733,7 +735,56 @@
 - **Method + URL:** `PATCH /api/v1/notes/{noteId}`
 - **인증:** USER, 작성자 본인
 - **ERD:** `notes`, `note_verses`
+- **연결 화면:** N-04, Q-06
 - **주의:** 이미 생성된 `sharing_posts`의 스냅샷은 자동 변경하지 않는다.
+- **상태 전이:** `DRAFT -> SAVED`, `SAVED -> DRAFT`, `DRAFT/SAVED -> DELETED`. `DELETED` 상태 노트는 수정할 수 없다.
+- **구절 수정 정책:** `verseIds`를 전달하면 기존 `note_verses`를 요청 배열 기준으로 교체한다. `MEDITATION`은 `qtPassageId`의 구절 범위 안에서만 허용하고, `SERMON`은 자유 선택을 허용한다. `PRAYER`, `REPENTANCE`, `GRATITUDE`는 구절 연결 없이 저장할 수 있다.
+
+요청 예시:
+
+```json
+{
+  "status": "SAVED",
+  "title": "오늘의 묵상",
+  "rememberSection": "기억할 말씀",
+  "interpretSection": "깨달은 점",
+  "applySection": "적용할 점",
+  "praySection": "기도",
+  "body": null,
+  "verseIds": [1001, 1002],
+  "visibility": "PRIVATE"
+}
+```
+
+자유 노트 요청 예시:
+
+```json
+{
+  "status": "SAVED",
+  "title": "감사일기",
+  "body": "오늘 감사한 일을 기록합니다.",
+  "verseIds": [],
+  "visibility": "PRIVATE"
+}
+```
+
+응답 예시:
+
+```json
+{
+  "id": 200,
+  "category": "MEDITATION",
+  "status": "SAVED",
+  "visibility": "PRIVATE",
+  "activeUniqueKey": "ACTIVE",
+  "savedAt": "2026-05-17T08:15:00+09:00",
+  "updatedAt": "2026-05-17T08:15:00+09:00",
+  "sharingSnapshotUpdated": false
+}
+```
+
+- **성공 코드:** `200 OK`
+- **실패 코드:** `400 VALIDATION_ERROR`, `403 FORBIDDEN`, `404 NOT_FOUND`, `409 DUPLICATE_NOTE`, `409 INVALID_STATUS_TRANSITION`, `422 INVALID_INPUT`
 
 ### 4.3.7 노트 삭제
 
@@ -942,7 +993,7 @@
 - **Method + URL:** `DELETE /api/v1/sharing-posts/{postId}`
 - **인증:** USER 작성자 본인 또는 ADMIN + OPERATOR
 - **ERD:** `sharing_posts`, `audit_logs`
-- **처리:** 공개 중단은 `status=HIDDEN`, 삭제는 `status=DELETED`와 `deleted_at` 기록
+- **처리:** 공개 중단은 `status=HIDDEN`, `hidden_at=now()`를 기록한다. 삭제는 `status=DELETED`로만 전환하고, ERD에 `sharing_posts.deleted_at` 컬럼이 없으므로 삭제 시각은 `updated_at`과 감사 로그로 추적한다.
 - **Response:** `204 No Content`
 
 ### 4.4.7 신고 접수
@@ -956,7 +1007,7 @@
 {
   "targetType": "POST",
   "targetId": 300,
-  "reasonCode": "INAPPROPRIATE",
+  "reason": "INAPPROPRIATE",
   "detail": "부적절한 표현이 있습니다."
 }
 ```
@@ -1176,13 +1227,13 @@
 - **Method + URL:** `DELETE /api/v1/me/praise-songs/{id}`
 - **인증:** USER
 - **ERD:** `praise_songs`, `member_praise_songs`
-- **주의:** 서버는 사용자의 실제 음원 파일을 저장하지 않는다. 외부 링크 또는 로컬 device song key만 저장한다.
+- **주의:** 서버는 사용자의 실제 음원 파일, 가사, 외부 URL을 저장하지 않는다. 큐레이션 곡 메타데이터와 사용자 저장 관계, 로컬 디바이스 식별자인 `deviceSongKey`, 목록 표시명 `displayTitle`만 저장한다.
 
 ```json
 {
   "praiseSongId": 50,
   "deviceSongKey": "local-device-song-id",
-  "memo": "아침 QT 후 듣기"
+  "displayTitle": "아침 QT 찬양"
 }
 ```
 
@@ -1190,14 +1241,16 @@
 {
   "id": 70,
   "praiseSongId": 50,
+  "displayTitle": "아침 QT 찬양",
   "title": "은혜",
   "artist": "큐레이션",
-  "sourceType": "EXTERNAL_LINK",
-  "externalUrl": "https://example.com/song",
+  "sourceType": "CURATED",
   "deviceSongKey": "local-device-song-id",
   "createdAt": "2026-05-17T10:00:00+09:00"
 }
 ```
+
+- **ERD 정합성:** `sourceType`은 `praise_songs.source_type`의 `CURATED` 또는 `DEVICE`만 사용한다. 서버는 외부 URL, 음원 파일, 가사, 사용자 메모를 저장하지 않는다. 사용자 저장 목록의 표시명은 `member_praise_songs.display_title`에 저장하므로 `displayTitle`은 필수다.
 
 ---
 
@@ -1254,7 +1307,7 @@
       "status": "VALIDATING",
       "promptVersion": "2026.05.1",
       "checklistVersionId": 4,
-      "latestValidationResult": "PASS",
+      "latestValidationResult": "PASSED",
       "sourceLabelPresent": true,
       "createdAt": "2026-05-17T06:00:00+09:00"
     }
@@ -1304,8 +1357,17 @@
 ```json
 {
   "evaluationSetId": 20,
-  "reason": "반려 사례로 회귀 테스트에 필요합니다.",
-  "expectedResult": "REJECT"
+  "sourceType": "VALIDATION_FAILURE",
+  "sourceId": 500,
+  "targetType": "BIBLE_VERSE",
+  "targetId": 1001,
+  "inputJson": {
+    "assetId": 500
+  },
+  "expectedPolicyJson": {
+    "expectedResult": "REJECTED",
+    "reason": "반려 사례로 회귀 테스트에 필요합니다."
+  }
 }
 ```
 
@@ -1360,23 +1422,146 @@
 - **상태 전이:** `ACTIVE -> SUSPENDED`, `SUSPENDED -> ACTIVE`. `WITHDRAWN`은 재활성화할 수 없다.
 - **실패 코드:** `409 INVALID_STATUS_TRANSITION`, `404 NOT_FOUND`, `403 FORBIDDEN`
 
-### 4.7.6 공지 관리
+### 4.7.6 찬양 큐레이션 관리
+
+- **Method + URL:** `GET /api/v1/admin/praise-songs?status=ACTIVE&page=0&size=20&sort=createdAt,desc`
+- **Method + URL:** `POST /api/v1/admin/praise-songs`
+- **Method + URL:** `PATCH /api/v1/admin/praise-songs/{id}`
+- **Method + URL:** `POST /api/v1/admin/praise-songs/{id}/hide`
+- **인증:** ADMIN + OPERATOR/SUPER_ADMIN
+- **연결 화면:** AD-05
+- **ERD:** `praise_songs`, `audit_logs`
+- **정책:** 관리자 큐레이션은 곡 메타데이터와 저작권 확인 메모만 관리한다. 서버에는 음원 파일, 가사, 외부 재생 URL을 저장하지 않는다.
+
+목록 응답:
+
+```json
+{
+  "content": [
+    {
+      "id": 50,
+      "title": "은혜",
+      "artist": "큐레이션",
+      "sourceType": "CURATED",
+      "licenseNote": "운영자가 저작권 상태를 확인함",
+      "status": "ACTIVE",
+      "createdAt": "2026-05-17T10:00:00+09:00",
+      "updatedAt": null
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1,
+  "first": true,
+  "last": true
+}
+```
+
+생성/수정 요청:
+
+```json
+{
+  "title": "은혜",
+  "artist": "큐레이션",
+  "sourceType": "CURATED",
+  "licenseNote": "운영자가 저작권 상태를 확인함",
+  "status": "ACTIVE"
+}
+```
+
+성공 응답:
+
+```json
+{
+  "id": 50,
+  "title": "은혜",
+  "artist": "큐레이션",
+  "sourceType": "CURATED",
+  "licenseNote": "운영자가 저작권 상태를 확인함",
+  "status": "ACTIVE",
+  "createdAt": "2026-05-17T10:00:00+09:00",
+  "updatedAt": "2026-05-17T10:10:00+09:00"
+}
+```
+
+- **숨김 처리:** `POST /api/v1/admin/praise-songs/{id}/hide`는 `praise_songs.status=HIDDEN`으로 변경하고 `audit_logs.action_type=PRAISE_SONG_HIDE`를 기록한다.
+- **링크 오류 상태:** ERD에 외부 URL/링크 상태 컬럼이 없으므로 AD-05의 링크 오류는 서버 저장 상태가 아니라 운영 입력 검증 실패나 클라이언트 표시 상태로 처리한다.
+- **성공 코드:** 생성 `201 Created`, 수정 `200 OK`, 숨김 `204 No Content`
+- **실패 코드:** `400 VALIDATION_ERROR`, `403 FORBIDDEN`, `404 NOT_FOUND`, `409 INVALID_STATUS_TRANSITION`
+
+### 4.7.7 공지 관리
 
 - **Method + URL:** `GET /api/v1/admin/notices?page=0&size=20`
 - **Method + URL:** `POST /api/v1/admin/notices`
 - **Method + URL:** `PATCH /api/v1/admin/notices/{id}`
 - **Method + URL:** `POST /api/v1/admin/notices/{id}/publish`
+- **Method + URL:** `POST /api/v1/admin/notices/{id}/hide`
 - **인증:** ADMIN + OPERATOR/SUPER_ADMIN
 - **ERD:** `notices`, `notifications`, `audit_logs`
 
-### 4.7.7 감사 로그 조회
+목록 응답:
+
+```json
+{
+  "content": [
+    {
+      "id": 20,
+      "title": "서비스 점검 안내",
+      "bodyPreview": "오늘 밤 점검이 예정되어 있습니다.",
+      "status": "DRAFT",
+      "publishedAt": null,
+      "createdAt": "2026-05-17T10:00:00+09:00",
+      "updatedAt": null
+    }
+  ],
+  "page": 0,
+  "size": 20,
+  "totalElements": 1,
+  "totalPages": 1,
+  "first": true,
+  "last": true
+}
+```
+
+생성/수정 요청:
+
+```json
+{
+  "title": "서비스 점검 안내",
+  "body": "오늘 밤 점검이 예정되어 있습니다.",
+  "status": "DRAFT"
+}
+```
+
+발행 응답:
+
+```json
+{
+  "id": 20,
+  "status": "PUBLISHED",
+  "publishedAt": "2026-05-17T10:20:00+09:00",
+  "notificationResult": {
+    "requestedCount": 1200,
+    "createdCount": 1200,
+    "failedCount": 0
+  }
+}
+```
+
+- **발행 정책:** `PUBLISHED` 전환 시 대상 회원에게 `notifications.type=NOTICE`, `notifications.notice_id=notices.id`를 생성한다. 알림 생성이 일부 실패하면 공지 상태는 `PUBLISHED`로 유지하고 `notificationResult.failedCount`와 감사 로그에 실패를 기록한다.
+- **숨김 처리:** `POST /api/v1/admin/notices/{id}/hide`는 `notices.status=HIDDEN`으로 변경한다. 이미 생성된 알림은 삭제하지 않지만 링크 이동 시 숨김 안내를 반환한다.
+- **성공 코드:** 생성 `201 Created`, 수정/발행 `200 OK`, 숨김 `204 No Content`
+- **실패 코드:** `400 VALIDATION_ERROR`, `403 FORBIDDEN`, `404 NOT_FOUND`, `409 INVALID_STATUS_TRANSITION`, `500 INTERNAL_ERROR`
+
+### 4.7.8 감사 로그 조회
 
 - **Method + URL:** `GET /api/v1/admin/audit-logs?actorType=ADMIN&actionType=AI_ASSET_APPROVE&from=2026-05-01&to=2026-05-17&page=0&size=50`
 - **인증:** ADMIN + OPERATOR/REVIEWER/SUPER_ADMIN
 - **ERD:** `audit_logs`, `admin_users`, `service_accounts`
 - **주의:** 수정/삭제 API를 제공하지 않는다.
 
-### 4.7.8 AI 운영 모니터링
+### 4.7.9 AI 운영 모니터링
 
 - **Method + URL:** `GET /api/v1/admin/ai/monitoring?from=2026-05-01&to=2026-05-17`
 - **인증:** ADMIN + OPERATOR/REVIEWER/SUPER_ADMIN
@@ -1401,7 +1586,7 @@
     "failCount": 10,
     "failureReasons": [
       {
-        "reasonCode": "SOURCE_MISSING",
+        "resultCode": "SOURCE_MISSING",
         "count": 4
       }
     ]
@@ -1413,14 +1598,14 @@
     "failed": 8,
     "blockedReasons": [
       {
-        "reasonCode": "VALUE_JUDGMENT",
+        "blockedReason": "VALUE_JUDGMENT",
         "count": 6
       }
     ]
   },
   "checklists": [
     {
-      "checklistType": "QA_RESPONSE",
+      "checklistType": "QA",
       "activeVersion": "2026.05.1",
       "passRate": 0.91
     }
@@ -1459,7 +1644,7 @@
   "assetType": "EXPLANATION",
   "targetType": "BIBLE_VERSE",
   "targetId": 1001,
-  "contentJson": {
+  "payloadJson": {
     "summary": "요약",
     "explanation": "해설",
     "sourceLabel": "source"
@@ -1480,9 +1665,18 @@
   "validationReferenceJobId": 20,
   "checklistVersionId": 4,
   "layer": 1,
-  "result": "PASS",
-  "reason": "금지 표현 없음",
-  "detailJson": {}
+  "result": "PASSED",
+  "checklistJson": {
+    "summary": "금지 표현 없음",
+    "items": [
+      {
+        "code": "NO_VALUE_JUDGMENT",
+        "passed": true,
+        "message": "가치 판단 표현 없음"
+      }
+    ]
+  },
+  "reviewerType": "AUTO"
 }
 ```
 
@@ -1508,7 +1702,7 @@
 | `GET /notifications` | `read`, `type` | `createdAt,desc` |
 | `GET /admin/qt-passages` | `status`, `from`, `to`, `q` | `qtDate,desc` |
 | `GET /admin/ai/assets` | `assetType`, `targetType`, `status`, `promptVersionId`, `checklistVersionId` | `createdAt,desc` |
-| `GET /admin/reports` | `targetType`, `status`, `reasonCode`, `from`, `to` | `createdAt,desc` |
+| `GET /admin/reports` | `targetType`, `status`, `reason`, `from`, `to` | `createdAt,desc` |
 | `GET /admin/audit-logs` | `actorType`, `actorId`, `actionType`, `targetType`, `from`, `to` | `createdAt,desc` |
 
 ---
@@ -1554,6 +1748,17 @@
 | `RATE_LIMIT_EXCEEDED` | 429 | 호출 한도 초과 |
 | `EXTERNAL_AI_ERROR` | 503 | 외부 AI 서비스 오류 |
 | `INTERNAL_ERROR` | 500 | 서버 내부 오류 |
+
+### 6.3 성공 상태 코드 적용 기준
+
+| 메서드/상황 | 성공 코드 | 적용 기준 |
+|---|---:|---|
+| `GET` 조회 | 200 | 단건/목록/대시보드/모니터링 조회 |
+| `POST` 생성 | 201 | 노트, 댓글, 신고, 공지, 평가 셋, 검증 작업처럼 새 리소스가 즉시 생성된 경우 |
+| `POST` 비동기 접수 | 202 | AI Q&A 요청, AI 재생성 요청처럼 작업 큐에 등록되고 완료를 polling해야 하는 경우 |
+| `POST` 상태 변경 | 200 또는 204 | 승인/반려/숨김/제재처럼 변경 결과 객체가 필요하면 200, 바디가 필요 없으면 204 |
+| `PATCH` 수정 | 200 | 수정된 리소스 요약을 반환하는 경우 |
+| `DELETE` 삭제/해제 | 204 | 논리 삭제 또는 관계 해제 완료, 응답 바디 없음 |
 
 ---
 
@@ -1623,7 +1828,7 @@
 
 ### 7.3 평가 셋 API
 
-- **Method + URL:** `GET /api/v1/admin/ai/evaluation-sets?evalType=QA_RESPONSE`
+- **Method + URL:** `GET /api/v1/admin/ai/evaluation-sets?evalType=QA`
 - **Method + URL:** `POST /api/v1/admin/ai/evaluation-sets`
 - **Method + URL:** `GET /api/v1/admin/ai/evaluation-sets/{setId}/cases`
 - **Method + URL:** `POST /api/v1/admin/ai/evaluation-sets/{setId}/cases`
@@ -1636,7 +1841,8 @@
 
 ```json
 {
-  "evalType": "QA_RESPONSE",
+  "name": "AI Q&A 정책 회귀 평가",
+  "evalType": "QA",
   "version": "2026.05.1",
   "description": "AI Q&A 차단/응답 회귀 평가",
   "status": "DRAFT"
@@ -1647,14 +1853,14 @@
 
 ```json
 {
-  "targetType": "AI_QA_REQUEST",
-  "sourceType": "REPORTED_CASE",
+  "targetType": "QA_REQUEST",
+  "sourceType": "USER_REPORT",
   "sourceId": 700,
   "inputJson": {
     "question": "이 본문에서 내 믿음이 부족한 건가요?",
     "bibleVerseId": 1001
   },
-  "expectedJson": {
+  "expectedPolicyJson": {
     "status": "BLOCKED",
     "blockedReason": "VALUE_JUDGMENT"
   },
@@ -1687,6 +1893,8 @@
 
 ```json
 {
+  "sourceName": "IVP 성경배경주석",
+  "sourceFileName": "ivp-background-commentary.pdf",
   "sourceFileHash": "sha256:...",
   "storageUri": "s3://temporary-validation/source.pdf",
   "indexStorageUri": "s3://temporary-validation/index",
@@ -1697,11 +1905,15 @@
 ```json
 {
   "id": 20,
-  "status": "READY",
+  "sourceName": "IVP 성경배경주석",
+  "sourceFileName": "ivp-background-commentary.pdf",
+  "status": "ACTIVE",
   "expiresAt": "2026-05-18T10:00:00+09:00",
   "deletedAt": null
 }
 ```
+
+- **상태 값:** `validation_reference_jobs.status`는 `ACTIVE`, `EXPIRED`, `DELETED`만 사용한다.
 
 ---
 
@@ -1716,15 +1928,15 @@
 | 시뮬레이터 | `/qt/{id}/simulator-clips/{clipId}` | `simulator_clips`, `simulator_component_library_versions` | `scene_script_json`, `component_library_version_id`, `status` |
 | 노트 | `/notes/*`, `/me/meditation-calendar` | `notes`, `note_verses`, `qt_passages`, `bible_verses` | `category`, `status`, `visibility`, `body`, `saved_at`, `deleted_at`, `active_unique_key`, 4개 QT 섹션 |
 | 나눔 | `/sharing-posts/*`, `/me/sharing-posts` | `sharing_posts`, `notes`, `likes`, `comments` | `nickname_snapshot`, `title_snapshot`, `body_snapshot`, `verse_snapshot_json`, `comments_enabled`, `source_note_deleted_at`, `status`, `published_at` |
-| 신고 | `/reports`, `/admin/reports` | `reports`, `notifications`, `audit_logs` | `target_type`, `target_id`, `reason_code`, `status` |
+| 신고 | `/reports`, `/admin/reports` | `reports`, `notifications`, `audit_logs` | `target_type`, `target_id`, `reason`, `status` |
 | 알림 | `/notifications` | `notifications`, `notices` | `type`, `title`, `body`, `link_type`, `link_id`, `read_at` |
 | 공지 | `/admin/notices` | `notices`, `notifications` | `title`, `body`, `status`, `published_at` |
-| 찬양 | `/praise-songs`, `/me/praise-songs` | `praise_songs`, `member_praise_songs` | `title`, `source_type`, `external_url`, `device_song_key` |
+| 찬양 | `/praise-songs`, `/me/praise-songs`, `/admin/praise-songs` | `praise_songs`, `member_praise_songs` | `title`, `artist`, `source_type`, `license_note`, `status`, `device_song_key`, `display_title` |
 | 미션 | `/me/dashboard` | `mission_definitions`, `member_mission_progress` | `metric_type`, `progress_rate`, `period_start_date` |
 | AI 생성 | `/system/ai/generation-jobs`, `/system/ai/assets` | `ai_prompt_versions`, `ai_generation_jobs`, `ai_generated_assets` | `prompt_type`, `version`, `job_type`, `asset_type`, `status` |
-| AI 검증 | `/admin/ai/assets`, `/system/ai/validation-logs` | `ai_validation_logs`, `validation_reference_jobs`, `ai_validation_checklist_versions` | `layer`, `result`, `reason`, `checklist_version_id` |
+| AI 검증 | `/admin/ai/assets`, `/system/ai/validation-logs` | `ai_validation_logs`, `validation_reference_jobs`, `ai_validation_checklist_versions` | `layer`, `result`, `checklist_json`, `reviewer_type`, `checklist_version_id` |
 | AI Q&A | `/ai/qa-requests` | `ai_qa_requests`, `ai_generated_assets`, `ai_validation_logs` | `question`, `answer`, `source_label`, `status`, `blocked_reason`, `qa_response_asset_id`, `answered_at` |
-| 평가 셋 | `/admin/ai/evaluation-sets/*` | `ai_evaluation_sets`, `ai_evaluation_cases` | `eval_type`, `version`, `target_type`, `source_type`, `status` |
+| 평가 셋 | `/admin/ai/evaluation-sets/*` | `ai_evaluation_sets`, `ai_evaluation_cases` | `name`, `eval_type`, `version`, `target_type`, `source_type`, `expected_policy_json`, `status` |
 | 감사 로그 | `/admin/audit-logs` | `audit_logs`, `admin_users`, `service_accounts` | `actor_type`, `actor_id`, `action_type`, `target_type`, `target_id` |
 
 ### 8.1 주요 API 필드명과 ERD 컬럼명 매핑
@@ -1738,13 +1950,40 @@
 | `sourceNoteDeletedAt` | `sharing_posts.source_note_deleted_at` | 원본 노트 삭제 안내 판단 |
 | `bodySnapshot` | `sharing_posts.body_snapshot` | 공유 시점 본문 스냅샷 |
 | `verseSnapshot` | `sharing_posts.verse_snapshot_json` | 공유 시점 구절 스냅샷 |
+| `reason` | `reports.reason` | 신고 사유 코드. `reasonCode`는 사용하지 않음 |
 | `sourceLabel` | `verse_explanations.source_label`, `glossary_terms.source_label`, `ai_qa_requests.source_label` | 사용자 노출 출처 표기. Q&A는 단일 문자열 |
 | `blockedReason` | `ai_qa_requests.blocked_reason` | AI Q&A 차단 사유 |
 | `qaResponseAssetId` | `ai_qa_requests.qa_response_asset_id` | Q&A 응답 산출물 연결 |
+| `displayTitle` | `member_praise_songs.display_title` | 내 찬양 목록 표시명. 저장 요청 필수 |
+| `payloadJson` | `ai_generated_assets.payload_json` | AI 산출물 원본 |
+| `checklistJson` | `ai_validation_logs.checklist_json` | 검증 세부 결과 |
+| `reviewerType` | `ai_validation_logs.reviewer_type` | `AUTO`, `ADMIN`, `ADVISOR` |
+| `sourceName` | `validation_reference_jobs.source_name` | 검증용 참조 자료 이름 |
+| `sourceFileName` | `validation_reference_jobs.source_file_name` | 검증용 참조 원본 파일명 |
+| `expectedPolicyJson` | `ai_evaluation_cases.expected_policy_json` | 기대 검증 기준 |
 | `linkType` | `notifications.link_type` | 알림 이동 대상 유형 |
 | `linkId` | `notifications.link_id` | 알림 이동 대상 ID |
 | `adminRole` | `admin_users.admin_role` | 관리자 세부 권한 |
 | `actionType` | `audit_logs.action_type` | 감사 로그 작업 유형 |
+
+### 8.2 ERD/API enum 통일 기준
+
+| 도메인 | 필드 | 허용 값 |
+|---|---|---|
+| 신고 대상 | `reports.target_type`, `targetType` | `POST`, `COMMENT`, `AI_QA_REQUEST`, `AI_ASSET` |
+| 신고 상태 | `reports.status`, `status` | `RECEIVED`, `REVIEWING`, `RESOLVED`, `REJECTED` |
+| 찬양 출처 | `praise_songs.source_type`, `sourceType` | `CURATED`, `DEVICE` |
+| AI 산출물 유형 | `ai_generated_assets.asset_type`, `assetType` | `EXPLANATION`, `SUMMARY`, `GLOSSARY`, `SIMULATOR`, `QA_RESPONSE` |
+| AI 산출물 대상 | `ai_generated_assets.target_type`, `targetType` | `BIBLE_VERSE`, `QT_PASSAGE`, `QA_REQUEST` |
+| AI 산출물 상태 | `ai_generated_assets.status`, `status` | `VALIDATING`, `APPROVED`, `REJECTED`, `HIDDEN` |
+| AI 검증 결과 | `ai_validation_logs.result`, `result` | `PASSED`, `REJECTED`, `NEEDS_REVIEW` |
+| AI 검증자 유형 | `ai_validation_logs.reviewer_type`, `reviewerType` | `AUTO`, `ADMIN`, `ADVISOR` |
+| 검증 참조 작업 상태 | `validation_reference_jobs.status`, `status` | `ACTIVE`, `EXPIRED`, `DELETED` |
+| 평가 셋 유형 | `ai_evaluation_sets.eval_type`, `evalType` | `EXPLANATION`, `SIMULATOR`, `QA` |
+| 평가 셋 상태 | `ai_evaluation_sets.status`, `status` | `DRAFT`, `ACTIVE`, `RETIRED` |
+| 평가 케이스 대상 | `ai_evaluation_cases.target_type`, `targetType` | `BIBLE_VERSE`, `QT_PASSAGE`, `QA_REQUEST` |
+| 평가 케이스 출처 | `ai_evaluation_cases.source_type`, `sourceType` | `VALIDATION_FAILURE`, `USER_REPORT`, `ADMIN_CREATED` |
+| 평가 케이스 상태 | `ai_evaluation_cases.status`, `status` | `CANDIDATE`, `APPROVED`, `REJECTED` |
 
 ---
 
@@ -1830,6 +2069,15 @@
 | 76 | POST | `/api/v1/system/validation-reference-jobs` | SYSTEM_BATCH | 검증용 참조 작업 생성 |
 | 77 | GET | `/api/v1/system/validation-reference-jobs/{jobId}` | SYSTEM_BATCH | 검증용 참조 작업 조회 |
 | 78 | POST | `/api/v1/system/validation-reference-jobs/{jobId}/expire` | SYSTEM_BATCH | 검증용 참조 작업 만료 |
+| 79 | GET | `/api/v1/admin/praise-songs` | OPERATOR | 관리자 찬양 목록 |
+| 80 | POST | `/api/v1/admin/praise-songs` | OPERATOR | 관리자 찬양 등록 |
+| 81 | PATCH | `/api/v1/admin/praise-songs/{id}` | OPERATOR | 관리자 찬양 수정 |
+| 82 | POST | `/api/v1/admin/praise-songs/{id}/hide` | OPERATOR | 관리자 찬양 숨김 |
+| 83 | GET | `/api/v1/admin/notices` | OPERATOR | 관리자 공지 목록 |
+| 84 | POST | `/api/v1/admin/notices` | OPERATOR | 공지 생성 |
+| 85 | PATCH | `/api/v1/admin/notices/{id}` | OPERATOR | 공지 수정 |
+| 86 | POST | `/api/v1/admin/notices/{id}/publish` | OPERATOR | 공지 발행 |
+| 87 | POST | `/api/v1/admin/notices/{id}/hide` | OPERATOR | 공지 숨김 |
 
 ---
 
@@ -1839,3 +2087,5 @@
 |---|---|---|---|
 | v1.0 | 2026-05-17 | Backend/API Designer | 최초 API 명세 작성 |
 | v1.1 | 2026-05-17 | Backend/API Designer | 화면별 누락 API 상세화, 노트 삭제/나눔 스냅샷/AI Q&A 비동기/관리자 AI 운영/평가 셋/체크리스트/마이페이지 달력 보강 |
+| v1.2 | 2026-05-17 | Backend/API Designer | ERD/API 필드명 및 enum 정합성 보정, 공통 envelope 예시 기준 명시, 찬양/AI 검증/평가 셋/검증 참조 작업 스키마 수정 |
+| v1.3 | 2026-05-17 | Backend/API Designer | 나눔 삭제 정책 ERD 정합성 보정, 관리자 찬양/공지 상세 API 추가, 노트 수정 요청/응답/상태 전이 보강, 연결성 표 잔여 필드 정리 |
